@@ -1,0 +1,39 @@
+@startuml
+
+package fr.upem.net.tcp.nonblocking {
+    class ServerChatHack {
+        +void launch()
+    }
+}
+
+package fr.upem.net.tcp.reader {
+    enum ProcessStatus {
+        DONE,REFILL,ERROR
+    }
+    
+    interface Reader {
+        +ProcessStatus process()
+        +Frame get()
+        +void reset()
+    }
+    
+    ProcessStatus --> Reader
+    Reader --> ServerChatHack
+    
+    note left of Reader : Will implemente mutiple readers
+}
+
+package fr.upem.net.tcp.frame {
+    interface Frame {
+        +ByteBuffer buffer()
+    }
+    
+    class FrameVisitor<U, R> {
+        +<T extends U> FrameVisitor<U, R> when(Class<? extends T> type, Function<? super T, ? extends R> fun)
+        +R call(U receiver)
+    }
+    
+    Frame --> Reader
+}
+
+@enduml
