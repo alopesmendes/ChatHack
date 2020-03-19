@@ -25,6 +25,11 @@ public interface Frame {
 		return new FrameGlobal(dataGlobal);
 	}
 	
+	/**
+	 * Creates a Error Frame.
+	 * @param dataError
+	 * @return FrameError.
+	 */
 	static Frame createFrameError(DataError dataError) {
 		Objects.requireNonNull(dataError);
 		return new FrameError(dataError);

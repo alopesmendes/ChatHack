@@ -70,6 +70,7 @@ public interface Data {
 	static class DataError implements Data {
 		final StandardOperation opcode;
 		final byte requestCode;
+		
 		/**
 		 * Constructs a DataError with it's opcode and requestCode.
 		 * @param opcode
@@ -116,6 +117,9 @@ public interface Data {
 	static Data createDataGlobal(StandardOperation opcode, byte step, String pseudo, String message) {
 		Objects.requireNonNull(pseudo);
 		Objects.requireNonNull(message);
+		if (opcode!=StandardOperation.GLOBAL_MESSAGE) {
+			throw new IllegalArgumentException("wrong opcode wating for global message opcode");
+		}
 		DataText pseudoData = new DataText(pseudo);
 		DataText messageData = new DataText(message);
 		return new DataGlobal(opcode, step, pseudoData, messageData);
@@ -128,6 +132,9 @@ public interface Data {
 	 * @return DataError.
 	 */
 	static Data createDataError(StandardOperation opcode, byte requestCode) {
+		if (opcode!=StandardOperation.ERROR) {
+			throw new IllegalArgumentException("wrong opcode waiting for error opcode");
+		}
 		return new DataError(opcode, requestCode);
 	}
 	
