@@ -96,6 +96,103 @@ public interface Data {
 		}
 	}
 	
+	static class DataPrivateConnectionRequested implements Data {
+		final StandardOperation opcode;
+		final DataText loginRequest;
+		
+		/**
+		 * Constructs a DataPrivateConnectionRequested with it's opcode and loginRequest.
+		 * @param opcode a StandardOperation
+		 * @param loginRequest a DataText
+		 */
+		private DataPrivateConnectionRequested(StandardOperation opcode, DataText loginRequest) {
+			this.opcode = opcode;
+			this.loginRequest = Objects.requireNonNull(loginRequest);
+		}
+		
+		@Override
+		public int hashCode() {
+			return Byte.hashCode(opcode.opcode()) ^ loginRequest.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataPrivateConnectionRequested)) {
+				return false;
+			}
+			DataPrivateConnectionRequested d = (DataPrivateConnectionRequested)obj;
+			return d.opcode==opcode && loginRequest.equals(d.loginRequest);
+		}
+	}
+	
+	static class DataPrivateConnectionAccepted implements Data {
+		final StandardOperation opcode;
+		final DataText loginReceiver;
+		final DataText socketAdress;
+		final long token;
+		
+		/**
+		 * Constructs a DataPrivateConnectionAccepted with it's opcode, loginReceiver, socketAdress and token.
+		 * @param opcode a StandardOperation.
+		 * @param loginReceiver a DataText.
+		 * @param socketAdress a DataText.
+		 * @param token a long.
+		 */
+		private DataPrivateConnectionAccepted(StandardOperation opcode, DataText loginReceiver, DataText socketAdress,
+				long token) {
+			this.opcode = opcode;
+			this.loginReceiver = loginReceiver;
+			this.socketAdress = socketAdress;
+			this.token = token;
+		}
+		
+		@Override
+		public int hashCode() {
+			return 	Byte.hashCode(opcode.opcode())^loginReceiver.hashCode()^socketAdress.hashCode()
+					^Long.hashCode(token);
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataPrivateConnectionAccepted)) {
+				return false;
+			}
+			DataPrivateConnectionAccepted d = (DataPrivateConnectionAccepted)obj;
+			return 	d.opcode==opcode && token==d.token 
+					&& loginReceiver.equals(d.loginReceiver) && socketAdress.equals(d.socketAdress);
+		}	
+	}
+
+	static class DataPrivateConnectionRejected implements Data {
+		final StandardOperation opcode;
+		final DataText loginReceiver;
+		/**
+		 * Constructs a DataPrivateConnectionRejected with it's opcode and loginReceiver.
+		 * @param opcode a StandardOperation 
+		 * @param loginReceiver a DataText
+		 */
+		private DataPrivateConnectionRejected(StandardOperation opcode, DataText loginReceiver) {
+			this.opcode = opcode;
+			this.loginReceiver = Objects.requireNonNull(loginReceiver);
+		}
+		
+		@Override
+		public int hashCode() {
+			return Byte.hashCode(opcode.opcode())^loginReceiver.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataPrivateConnectionRequested)) {
+				return false;
+			}
+			DataPrivateConnectionRejected d = (DataPrivateConnectionRejected) obj;
+			return opcode==d.opcode && loginReceiver.equals(d.loginReceiver);
+		}
+		
+		
+	}
+	
 	/**
 	 * Creates a DataText.
 	 * @param text a string
@@ -138,4 +235,53 @@ public interface Data {
 		return new DataError(opcode, requestCode);
 	}
 	
+	
+	/**
+	 * Creates a DataPrivateConnectionRequested. 
+	 * @param opcode a StandardOperation.
+	 * @param loginRequest a String.
+	 * @return DataPrivateConnectionRequested
+	 */
+	static Data createDataPrivateConnectionRequested(StandardOperation opcode, String loginRequest) {
+		Objects.requireNonNull(loginRequest);
+		if (opcode!=StandardOperation.PRIVATE_CONNEXION) {
+			throw new IllegalArgumentException("wrong opcode waiting for private connection opcode");
+		}
+		DataText dataLogin = new DataText(loginRequest);
+		return new DataPrivateConnectionRequested(opcode, dataLogin);
+	}
+	
+	/**
+	 * Creates a DataPrivateConnectionAccepted.
+	 * @param opcode a StandardOperation.
+	 * @param loginReceiver a String.
+	 * @param socketAdress a String.
+	 * @param token a long.
+	 * @return DataPrivateConnectionAccepted.
+	 */
+	static Data createDataPrivateConnectionAccepted(StandardOperation opcode, String loginReceiver, String socketAdress, long token) {
+		Objects.requireNonNull(loginReceiver);
+		Objects.requireNonNull(socketAdress);
+		if (opcode!=StandardOperation.PRIVATE_CONNEXION) {
+			throw new IllegalArgumentException("wrong opcode waiting for private connection opcode");
+		}
+		DataText dLogin = new DataText(loginReceiver);
+		DataText dSocket = new DataText(socketAdress);
+		return new DataPrivateConnectionAccepted(opcode, dLogin, dSocket, token);
+	}
+	
+	/**
+	 * Creates a DataPrivateConnectionRejected.
+	 * @param opcode a StandardOperation.
+	 * @param loginReceived a String.
+	 * @return DataPrivateConnectionRejected.
+	 */
+	static Data createDataPrivateConnectionRejected(StandardOperation opcode, String loginReceived) {
+		Objects.requireNonNull(loginReceived);
+		if (opcode!=StandardOperation.PRIVATE_CONNEXION) {
+			throw new IllegalArgumentException("wrong opcode waiting for private connection opcode");
+		}
+		DataText dataLogin = new DataText(loginReceived);
+		return new DataPrivateConnectionRejected(opcode, dataLogin);
+	}
 }
