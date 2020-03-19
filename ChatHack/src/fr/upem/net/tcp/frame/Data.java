@@ -31,20 +31,20 @@ public interface Data {
 	}
 	
 	static class DataGlobal implements Data {
-		final byte ack;
+		final StandardOperation opcode;
 		final byte step;
 		final DataText pseudo;
 		final DataText message;
 		
 		/**
 		 * Constructs a DataGlobal with it's ack, step, pseudo and message.
-		 * @param ack a byte.
+		 * @param opcode a byte.
 		 * @param step a byte.
 		 * @param pseudo a DataText.
 		 * @param message a DataText.
 		 */
-		private DataGlobal(byte ack, byte step, DataText pseudo, DataText message) {
-			this.ack = ack;
+		private DataGlobal(StandardOperation opcode, byte step, DataText pseudo, DataText message) {
+			this.opcode = opcode;
 			this.step = step;
 			this.pseudo = pseudo;
 			this.message = message;
@@ -53,7 +53,7 @@ public interface Data {
 		@Override
 		public int hashCode() {
 			
-			return Byte.hashCode(ack) ^ Byte.hashCode(step) ^ pseudo.hashCode() ^ message.hashCode();
+			return Byte.hashCode(opcode.opcode()) ^ Byte.hashCode(step) ^ pseudo.hashCode() ^ message.hashCode();
 		}
 		
 		@Override
@@ -62,27 +62,27 @@ public interface Data {
 				return false;
 			}
 			DataGlobal d = (DataGlobal)obj;
-			return 	ack==d.ack && step==d.step 
+			return 	opcode==d.opcode && step==d.step 
 					&& pseudo.equals(d.pseudo) && message.equals(d.message);
 		}
 	}
 	
 	static class DataError implements Data {
-		final byte opcode;
+		final StandardOperation opcode;
 		final byte requestCode;
 		/**
 		 * Constructs a DataError with it's opcode and requestCode.
 		 * @param opcode
 		 * @param requestCode
 		 */
-		private DataError(byte opcode, byte requestCode) {
+		private DataError(StandardOperation opcode, byte requestCode) {
 			this.opcode = opcode;
 			this.requestCode = requestCode;
 		}
 		
 		@Override
 		public int hashCode() {
-			return Byte.hashCode(opcode) ^ Byte.hashCode(requestCode);
+			return Byte.hashCode(opcode.opcode()) ^ Byte.hashCode(requestCode);
 		}
 		
 		@Override
@@ -113,12 +113,12 @@ public interface Data {
 	 * @param message a string
 	 * @return DataGlobal.
 	 */
-	static Data createDataGlobal(byte ack, byte step, String pseudo, String message) {
+	static Data createDataGlobal(StandardOperation opcode, byte step, String pseudo, String message) {
 		Objects.requireNonNull(pseudo);
 		Objects.requireNonNull(message);
 		DataText pseudoData = new DataText(pseudo);
 		DataText messageData = new DataText(message);
-		return new DataGlobal(ack, step, pseudoData, messageData);
+		return new DataGlobal(opcode, step, pseudoData, messageData);
 	}
 	
 	/**
@@ -127,7 +127,7 @@ public interface Data {
 	 * @param requestCode
 	 * @return DataError.
 	 */
-	static Data createDataError(byte opcode, byte requestCode) {
+	static Data createDataError(StandardOperation opcode, byte requestCode) {
 		return new DataError(opcode, requestCode);
 	}
 	

@@ -5,7 +5,6 @@ import java.util.Objects;
 
 import fr.upem.net.tcp.frame.Data.DataError;
 import fr.upem.net.tcp.frame.Data.DataGlobal;
-import fr.upem.net.tcp.frame.Data.DataText;
 
 public interface Frame {
 	
@@ -15,16 +14,6 @@ public interface Frame {
 	 */
 	ByteBuffer buffer();
 	
-	
-	/**
-	 * Creates a Text Frame .
-	 * @param dataText a DataText.
-	 * @return FrameText.
-	 */
-	static Frame createFrameText(DataText dataText) {
-		Objects.requireNonNull(dataText);
-		return new FrameText(dataText);
-	}
 	
 	/**
 	 * Creates a Global Frame.

@@ -18,10 +18,6 @@ public class FrameVisitorTest {
 		FrameVisitor fv2 = new FrameVisitor();
 		FrameVisitor fv3 = new FrameVisitor();
 		
-		fv1.when(Data.DataText.class, d -> Frame.createFrameText(d));
-		fv2.when(Data.DataText.class, d -> Frame.createFrameText(d));
-		fv3.when(Data.DataText.class, d -> Frame.createFrameText(d));
-		
 		fv1.when(Data.DataGlobal.class, d -> Frame.createFrameGlobal(d));
 		fv2.when(Data.DataGlobal.class, d -> Frame.createFrameGlobal(d));
 		fv3.when(Data.DataGlobal.class, d -> Frame.createFrameGlobal(d));

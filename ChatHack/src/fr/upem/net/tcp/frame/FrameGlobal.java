@@ -16,7 +16,7 @@ class FrameGlobal implements Frame {
 		ByteBuffer pseudo = new FrameText(dataGlobal.pseudo).buffer();
 		ByteBuffer message = new FrameText(dataGlobal.message).buffer();
 		ByteBuffer bb = ByteBuffer.allocate(2*Byte.BYTES+pseudo.remaining()+message.remaining());
-		bb.put(dataGlobal.ack).put(dataGlobal.step);
+		bb.put(dataGlobal.opcode.opcode()).put(dataGlobal.step);
 		bb.put(pseudo).put(message);
 		bb.flip();
 		return bb;
