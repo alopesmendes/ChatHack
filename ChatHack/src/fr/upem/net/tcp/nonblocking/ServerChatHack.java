@@ -18,8 +18,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.upem.net.tcp.frame.Frame;
-import fr.upem.net.tcp.reader.MessageReader;
 import fr.upem.net.tcp.reader.Reader;
+import fr.upem.net.tcp.reader.basics.MessageReader;
 
 public class ServerChatHack {
 	
@@ -33,7 +33,7 @@ public class ServerChatHack {
 		final private ServerChatHack server;
 		private boolean closed = false;
 
-		private final Reader messageReader = new MessageReader();
+		//private final Reader messageReader = new MessageReader();
 
 		private Context(ServerChatHack server, SelectionKey key) {
 			this.key = key;
@@ -52,7 +52,7 @@ public class ServerChatHack {
 		 */
 		private void processIn() throws IOException {
 			// TODO
-
+			/*
 			for (;;) {
 				Reader.ProcessStatus status = messageReader.process();
 				switch (status) {
@@ -68,6 +68,7 @@ public class ServerChatHack {
 					return;
 				}
 			}
+			*/
 		}
 
 		/**
