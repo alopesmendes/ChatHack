@@ -18,8 +18,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.upem.net.tcp.frame.Frame;
-import fr.upem.net.tcp.reader.MessageReader;
 import fr.upem.net.tcp.reader.Reader;
+import fr.upem.net.tcp.reader.basics.MessageReader;
 
 public class ServerChatHack {
 	
