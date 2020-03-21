@@ -2,8 +2,8 @@ package fr.upem.net.tcp.reader.basics;
 
 import java.nio.ByteBuffer;
 
+import fr.upem.net.tcp.frame.FrameVisitor;
 import fr.upem.net.tcp.reader.Reader;
-import fr.upem.net.tcp.reader.Reader.ProcessStatus;
 
 public class IntReader implements Reader<Integer> {
 
@@ -18,7 +18,7 @@ public class IntReader implements Reader<Integer> {
     }
 
     @Override
-    public ProcessStatus process() {
+    public ProcessStatus process(FrameVisitor fv) {
         if (state==State.DONE || state==State.ERROR) {
             throw new IllegalStateException();
         }

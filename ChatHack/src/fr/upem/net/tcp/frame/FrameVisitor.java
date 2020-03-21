@@ -29,6 +29,13 @@ public class FrameVisitor {
 				.apply(receiver);
 	}
 	
+	public static FrameVisitor create() {
+		FrameVisitor fv = new FrameVisitor();
+		return 	fv.when(Data.DataGlobalServer.class, d -> Frame.createFrameGlobal(d)).
+				when(Data.DataGlobalClient.class, d -> Frame.createFrameGlobal(d)).
+				when(Data.DataError.class, d -> Frame.createFrameError(d));
+	}
+	
 	@Override
 	public int hashCode() {
 		return map.hashCode();

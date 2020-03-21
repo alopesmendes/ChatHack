@@ -17,5 +17,4 @@ public enum StandardOperation {
 		return (byte)opcode;
 	}
 	
-	
 }

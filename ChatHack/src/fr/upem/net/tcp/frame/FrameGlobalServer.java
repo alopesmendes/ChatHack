@@ -2,12 +2,12 @@ package fr.upem.net.tcp.frame;
 
 import java.nio.ByteBuffer;
 
-import fr.upem.net.tcp.frame.Data.DataGlobal;
+import fr.upem.net.tcp.frame.Data.DataGlobalServer;
 
-class FrameGlobal implements Frame {
-	private final DataGlobal dataGlobal;
+class FrameGlobalServer implements Frame {
+	private final DataGlobalServer dataGlobal;
 	
-	public FrameGlobal(DataGlobal dataGlobal) {
+	public FrameGlobalServer(DataGlobalServer dataGlobal) {
 		this.dataGlobal = dataGlobal;
 	}
 	

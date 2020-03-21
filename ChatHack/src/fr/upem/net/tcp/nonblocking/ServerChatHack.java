@@ -17,9 +17,12 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.frame.Frame;
+import fr.upem.net.tcp.frame.FrameVisitor;
+import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
-import fr.upem.net.tcp.reader.basics.MessageReader;
+import fr.upem.net.tcp.reader.frames.FrameGlobalSendingReader;
 
 public class ServerChatHack {
 	
@@ -29,16 +32,18 @@ public class ServerChatHack {
 		final private SocketChannel sc;
 		final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 		final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-		final private Queue<Frame> queue = new LinkedList<>();
+		final private Queue<ByteBuffer> queue = new LinkedList<>();
 		final private ServerChatHack server;
+		final private Reader<Frame> reader;
 		private boolean closed = false;
+		final private FrameVisitor fv;
 
-		//private final Reader messageReader = new MessageReader();
-
-		private Context(ServerChatHack server, SelectionKey key) {
+		private Context(ServerChatHack server, SelectionKey key, String login) {
 			this.key = key;
 			this.sc = (SocketChannel) key.channel();
 			this.server = server;
+			reader = new FrameGlobalSendingReader(bbin, login);
+			fv = FrameVisitor.create();
 		}
 
 		/**
@@ -51,24 +56,23 @@ public class ServerChatHack {
 		 *
 		 */
 		private void processIn() throws IOException {
-			// TODO
-			/*
 			for (;;) {
-				Reader.ProcessStatus status = messageReader.process();
+				Reader.ProcessStatus status = reader.process(fv);
 				switch (status) {
 				case DONE:
-					Frame value = messageReader.get();
-					server.broadcast(value);
-					messageReader.reset();
+					Frame frame = reader.get();
+					server.broadcast(frame);
+					reader.reset();
 					break;
 				case REFILL:
 					return;
 				case ERROR:
-					silentlyClose();
+					logger.info("request fail sending error frame");
+					queueMessage(fv.call(Data.createDataError(StandardOperation.ERROR, (byte)1)));
+					//silentlyClose();
 					return;
 				}
 			}
-			*/
 		}
 
 		/**
@@ -77,8 +81,7 @@ public class ServerChatHack {
 		 * @param value
 		 */
 		private void queueMessage(Frame value) {
-			// TODO
-			queue.add(value);
+			queue.add(value.buffer());
 			processOut();
 			updateInterestOps();
 		}
@@ -89,8 +92,8 @@ public class ServerChatHack {
 		 */
 		private void processOut() {
 			// TODO
-			while (!queue.isEmpty() && bbout.remaining() >= queue.peek().buffer().remaining()) {
-				bbout.put(queue.poll().buffer());
+			while (!queue.isEmpty() && bbout.remaining() >= queue.peek().remaining()) {
+				bbout.put(queue.poll());
 			}
 		}
 
@@ -142,9 +145,7 @@ public class ServerChatHack {
 			if (sc.read(bbin) == -1) {
 				closed = true;
 			}
-
 			processIn();
-
 			updateInterestOps();
 		}
 
@@ -156,27 +157,20 @@ public class ServerChatHack {
 		 *
 		 * @throws IOException
 		 */
-
 		private void doWrite() throws IOException {
-			// TODO
 			bbout.flip();
-
 			sc.write(bbout);
-
 			bbout.compact();
-
 			processOut();
-
 			updateInterestOps();
 		}
-
 	}
-	
 	static private int BUFFER_SIZE = 1_024;
 	static private Logger logger = Logger.getLogger(ServerChatHack.class.getName());
 
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
+	private int cpt;
 	
 	
 	public ServerChatHack(int port) throws IOException {
@@ -187,6 +181,7 @@ public class ServerChatHack {
 	
 	
 	public void launch() throws IOException {
+		
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 		while (!Thread.interrupted()) {
@@ -231,7 +226,7 @@ public class ServerChatHack {
 		if (sc != null) {
 			sc.configureBlocking(false);
 			SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
-			clientKey.attach(new Context(this, clientKey));
+			clientKey.attach(new Context(this, clientKey, "Ailton"+cpt++));
 		}
 	}
 
@@ -250,11 +245,8 @@ public class ServerChatHack {
 	 * @param value
 	 */
 	private void broadcast(Frame value) {
-		// TODO
 		for (SelectionKey key : selector.keys()) {
-
 			Context ctx = (Context) key.attachment();
-
 			if (ctx == null) {
 				continue;
 			}

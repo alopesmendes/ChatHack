@@ -3,8 +3,8 @@ package fr.upem.net.tcp.reader.basics;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+import fr.upem.net.tcp.frame.FrameVisitor;
 import fr.upem.net.tcp.reader.Reader;
-import fr.upem.net.tcp.reader.Reader.ProcessStatus;
 
 public class StringReader implements Reader<String>{
 	private enum State {
@@ -21,7 +21,7 @@ public class StringReader implements Reader<String>{
 	}
 
 	@Override
-	public ProcessStatus process() {
+	public ProcessStatus process(FrameVisitor fv) {
 		if (state==State.DONE || state==State.ERROR) {
 			System.out.println(state);
 			throw new IllegalStateException();
@@ -41,6 +41,9 @@ public class StringReader implements Reader<String>{
 				state = State.WAITING_MSG;
 
 			case WAITING_MSG:
+				if (!bb.hasRemaining()) {
+					return ProcessStatus.ERROR;
+				}
 				if (bb.remaining() < size) {
 					return ProcessStatus.REFILL;
 				}

@@ -18,9 +18,9 @@ public class FrameVisitorTest {
 		FrameVisitor fv2 = new FrameVisitor();
 		FrameVisitor fv3 = new FrameVisitor();
 		
-		fv1.when(Data.DataGlobal.class, d -> Frame.createFrameGlobal(d));
-		fv2.when(Data.DataGlobal.class, d -> Frame.createFrameGlobal(d));
-		fv3.when(Data.DataGlobal.class, d -> Frame.createFrameGlobal(d));
+		fv1.when(Data.DataGlobalServer.class, d -> Frame.createFrameGlobal(d));
+		fv2.when(Data.DataGlobalServer.class, d -> Frame.createFrameGlobal(d));
+		fv3.when(Data.DataGlobalServer.class, d -> Frame.createFrameGlobal(d));
 		
 		
 		fv1.when(Data.DataError.class, d -> Frame.createFrameError(d));

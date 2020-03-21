@@ -16,8 +16,15 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 
+import fr.upem.net.tcp.frame.Data;
+import fr.upem.net.tcp.frame.Frame;
+import fr.upem.net.tcp.frame.FrameVisitor;
+import fr.upem.net.tcp.frame.StandardOperation;
+import fr.upem.net.tcp.reader.Reader;
+import fr.upem.net.tcp.reader.frames.FrameGlobalReceivingReader;
+
 public class ChatChaton {
-	static private int BUFFER_SIZE = 1_024;
+	static private int BUFFER_SIZE = 4_048;
 	static private Logger logger = Logger.getLogger(ChatChaton.class.getName());
 	private final SocketChannel sc;
 	private final Selector selector;
@@ -28,22 +35,14 @@ public class ChatChaton {
 	private final BlockingQueue<ByteBuffer> queue = new LinkedBlockingQueue<>();
 	private final ReentrantLock lock = new ReentrantLock();
 	private boolean cancel;
-	private final ByteBuffer login;
-	//private Reader messageReader = new MessageReader(bbin);
+	private final FrameVisitor fv;
+	private final Reader<Frame> reader = new FrameGlobalReceivingReader(bbin);
 
 	public ChatChaton(String host, int port, String login) throws IOException {
 		serverAddress = new InetSocketAddress(host, port);
 		sc = SocketChannel.open();
 		selector = Selector.open();
-		this.login = encodeText(login);
-	}
-	
-	private ByteBuffer encodeText(String login) {
-		ByteBuffer encode = StandardCharsets.UTF_8.encode(login);
-		ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES+encode.remaining());
-		bb.putInt(encode.remaining()).put(encode);
-		bb.flip();
-		return bb;
+		fv = FrameVisitor.create();
 	}
 	
 	public void launch() throws IOException {
@@ -59,9 +58,7 @@ public class ChatChaton {
 		sc.configureBlocking(false);
 		sc.connect(serverAddress);
 		logger.info("Connnected to:"+serverAddress);
-		uniqueKey=sc.register(selector, SelectionKey.OP_CONNECT|SelectionKey.OP_READ|SelectionKey.OP_WRITE);
-		sendLogin();
-		treatActions();
+		uniqueKey=sc.register(selector, SelectionKey.OP_CONNECT);
 		
 		Set<SelectionKey> selectedKeys = selector.selectedKeys();
 		while (!Thread.interrupted()) {
@@ -69,22 +66,6 @@ public class ChatChaton {
 			treatActions();
 			processSelectedKeys(selectedKeys);
 			selectedKeys.clear();
-		}
-	}
-	
-	private void sendLogin() {
-		lock.lock();
-		try {
-			ByteBuffer bb = ByteBuffer.allocate(Byte.BYTES+Long.BYTES+login.remaining());
-			bb.put((byte)2).putLong(0).put(login);
-			bb.flip();
-			login.flip();
-			queue.put(bb);
-			selector.wakeup();
-		} catch (InterruptedException e) {
-			return;
-		} finally {
-			lock.unlock();
 		}
 	}
 
@@ -110,44 +91,56 @@ public class ChatChaton {
 		updateInterestsOps();
 	}
 	
-	/*private String textSize(ByteBuffer bb) {
-		int size = bb.getInt();
-		bb.limit(bb.position()+size);
-		return StandardCharsets.UTF_8.decode(bb).toString();
-	}*/
-
+	private void brodcast(ByteBuffer bb) {
+		try {
+			if (bb.remaining() < 2 * Byte.BYTES) {
+				return;
+			}
+			int fLimit = bb.limit();
+			bb.get();
+			bb.get();
+			if (bb.remaining() < Integer.BYTES) {
+				return;
+			}
+			int size = bb.getInt();
+			bb.limit(bb.position()+size);
+			String login = StandardCharsets.UTF_8.decode(bb).toString();
+			bb.limit(fLimit);
+			size = bb.getInt();
+			bb.limit(bb.position()+size);
+			String message = StandardCharsets.UTF_8.decode(bb).toString();
+			System.out.println(login+":"+message);
+		} finally {
+			bb.flip();
+		}
+	}
+	
 	private void processIn() {
-		/*for (;;) {
-			Reader.ProcessStatus status = messageReader.process();
+		for (;;) {
+			Reader.ProcessStatus status = reader.process(fv);
 			switch (status) {
 			case DONE:
-				ByteBuffer value = (ByteBuffer) messageReader.get();
-				int oldLimit = value.limit();
-				String login = textSize(value);
-				value.limit(oldLimit);
-				String text = textSize(value);
-				
-				logger.info(login+"->"+text);
-				messageReader.reset();
+				Frame value = reader.get();
+				brodcast(value.buffer());
+				reader.reset();
 				break;
 			case REFILL:
 				return;
 			case ERROR:
-				silentlyClose(uniqueKey);
+				//silentlyClose(uniqueKey);
 				return;
 			}
-		}*/
+		}
 	}
 
 	private void processOut() {
-		while (!queue.isEmpty() && bbout.remaining() >= queue.peek().remaining()) {
+		while (!queue.isEmpty() && queue.peek().hasRemaining()) {
 			ByteBuffer bb = queue.remove();
 			bbout.put( bb );
 		}
 	}
 
 	private void doRead() throws IOException {
-		logger.info("read");
 		if (sc.read(bbin) == -1) {
 			cancel = true;
 		}
@@ -156,7 +149,6 @@ public class ChatChaton {
 	}
 
 	private void doWrite() throws IOException {
-		logger.info("write");
 		bbout.flip();
 		sc.write(bbout);
 		bbout.compact();
@@ -202,15 +194,11 @@ public class ChatChaton {
 		while (!Thread.interrupted()) {
 			try (Scanner scanner = new Scanner(System.in)) {
 				while (scanner.hasNextLine()) {
-					String num = scanner.nextLine();
-					ByteBuffer encode = encodeText(num);
-					ByteBuffer bb = ByteBuffer.allocate(encode.remaining()+login.remaining());
+					String message = scanner.nextLine();
+					Frame frame = fv.call(Data.createDataGlobalClient(StandardOperation.GLOBAL_MESSAGE, (byte)1, message));
 					lock.lock();
 					try {
-						bb.put(login).put(encode);
-						bb.flip();
-						login.flip();
-						queue.put(bb);
+						queue.put(frame.buffer());
 						selector.wakeup();
 					} finally {
 						lock.unlock();

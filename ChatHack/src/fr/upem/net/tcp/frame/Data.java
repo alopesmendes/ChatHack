@@ -1,6 +1,7 @@
 package fr.upem.net.tcp.frame;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public interface Data {
 	static class DataText implements Data {
@@ -30,7 +31,7 @@ public interface Data {
 		
 	}
 	
-	static class DataGlobal implements Data {
+	static class DataGlobalServer implements Data {
 		final StandardOperation opcode;
 		final byte step;
 		final DataText pseudo;
@@ -43,7 +44,7 @@ public interface Data {
 		 * @param pseudo a DataText.
 		 * @param message a DataText.
 		 */
-		private DataGlobal(StandardOperation opcode, byte step, DataText pseudo, DataText message) {
+		private DataGlobalServer(StandardOperation opcode, byte step, DataText pseudo, DataText message) {
 			this.opcode = opcode;
 			this.step = step;
 			this.pseudo = pseudo;
@@ -58,12 +59,44 @@ public interface Data {
 		
 		@Override
 		public boolean equals(Object obj) {
-			if (!(obj instanceof DataGlobal)) {
+			if (!(obj instanceof DataGlobalServer)) {
 				return false;
 			}
-			DataGlobal d = (DataGlobal)obj;
+			DataGlobalServer d = (DataGlobalServer)obj;
 			return 	opcode==d.opcode && step==d.step 
 					&& pseudo.equals(d.pseudo) && message.equals(d.message);
+		}
+	}
+	
+	static class DataGlobalClient implements Data {
+		final StandardOperation opcode;
+		final byte step;
+		final DataText message;
+		
+		/**
+		 * Constructs a DataGlobalClient with it's opcode, step and message.
+		 * @param opcode a StandardOperation
+		 * @param step a byte
+		 * @param message a DataText
+		 */
+		private DataGlobalClient(StandardOperation opcode, byte step, DataText message) {
+			this.opcode = opcode;
+			this.step = step;
+			this.message = message;
+		}
+		
+		@Override
+		public int hashCode() {
+			return Byte.hashCode(opcode.opcode())^Byte.hashCode(step)^message.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataGlobalClient)) {
+				return false;
+			}
+			DataGlobalClient d = (DataGlobalClient)obj;
+			return step==d.step && opcode==d.opcode && d.message.equals(message);
 		}
 	}
 	
@@ -193,6 +226,43 @@ public interface Data {
 		
 	}
 	
+	static class DataConnectionClient implements Data {
+		final StandardOperation opcode;
+		final byte connexion;
+		final DataText login;
+		final Optional<DataText> password;
+		/**
+		 * Constructs a DataConnectionClient with it's opcode, connexion, login and password.
+		 * @param opcode a StandardOperation.
+		 * @param connexion a byte.
+		 * @param login a DataText.
+		 * @param password a Optional<DataText>.
+		 */
+		private DataConnectionClient(StandardOperation opcode, byte connexion, DataText login, Optional<DataText> password) {
+			this.opcode = opcode;
+			this.connexion = connexion;
+			this.login = login;
+			this.password = password;
+		}
+		
+		@Override
+		public int hashCode() {
+			return 	Byte.hashCode(opcode.opcode()) ^ Byte.hashCode(connexion)
+					^ login.hashCode() ^ password.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataConnectionClient)) {
+				return false;
+			}
+			DataConnectionClient d = (DataConnectionClient)obj;
+			return 	d.connexion==connexion && d.opcode==opcode 
+					&& d.login.equals(login) && password.equals(d.password);
+		}
+		
+	}
+	
 	/**
 	 * Creates a DataText.
 	 * @param text a string
@@ -209,19 +279,28 @@ public interface Data {
 	 * @param step a byte
 	 * @param pseudo a string
 	 * @param message a string
-	 * @return DataGlobal.
+	 * @return DataGlobalServer.
 	 */
-	static Data createDataGlobal(StandardOperation opcode, byte step, String pseudo, String message) {
+	static Data createDataGlobalServer(StandardOperation opcode, byte step, String pseudo, String message) {
 		Objects.requireNonNull(pseudo);
 		Objects.requireNonNull(message);
-		if (opcode!=StandardOperation.GLOBAL_MESSAGE) {
-			throw new IllegalArgumentException("wrong opcode wating for global message opcode");
-		}
 		DataText pseudoData = new DataText(pseudo);
 		DataText messageData = new DataText(message);
-		return new DataGlobal(opcode, step, pseudoData, messageData);
+		return new DataGlobalServer(opcode, step, pseudoData, messageData);
 	}
 	
+	/**
+	 * Creates a DataGlobalClient.
+	 * @param opcode a StandardOperation
+	 * @param step a byte
+	 * @param message a string
+	 * @return DataGlobalClient.
+	 */
+	static Data createDataGlobalClient(StandardOperation opcode, byte step, String message) {
+		Objects.requireNonNull(message);
+		DataText messageData = new DataText(message);
+		return new DataGlobalClient(opcode, step, messageData);
+	}
 	/**
 	 * Creates a DataError.
 	 * @param opcode
@@ -229,9 +308,6 @@ public interface Data {
 	 * @return DataError.
 	 */
 	static Data createDataError(StandardOperation opcode, byte requestCode) {
-		if (opcode!=StandardOperation.ERROR) {
-			throw new IllegalArgumentException("wrong opcode waiting for error opcode");
-		}
 		return new DataError(opcode, requestCode);
 	}
 	
@@ -244,9 +320,6 @@ public interface Data {
 	 */
 	static Data createDataPrivateConnectionRequested(StandardOperation opcode, String loginRequest) {
 		Objects.requireNonNull(loginRequest);
-		if (opcode!=StandardOperation.PRIVATE_CONNEXION) {
-			throw new IllegalArgumentException("wrong opcode waiting for private connection opcode");
-		}
 		DataText dataLogin = new DataText(loginRequest);
 		return new DataPrivateConnectionRequested(opcode, dataLogin);
 	}
@@ -262,9 +335,6 @@ public interface Data {
 	static Data createDataPrivateConnectionAccepted(StandardOperation opcode, String loginReceiver, String socketAdress, long token) {
 		Objects.requireNonNull(loginReceiver);
 		Objects.requireNonNull(socketAdress);
-		if (opcode!=StandardOperation.PRIVATE_CONNEXION) {
-			throw new IllegalArgumentException("wrong opcode waiting for private connection opcode");
-		}
 		DataText dLogin = new DataText(loginReceiver);
 		DataText dSocket = new DataText(socketAdress);
 		return new DataPrivateConnectionAccepted(opcode, dLogin, dSocket, token);
@@ -278,10 +348,15 @@ public interface Data {
 	 */
 	static Data createDataPrivateConnectionRejected(StandardOperation opcode, String loginReceived) {
 		Objects.requireNonNull(loginReceived);
-		if (opcode!=StandardOperation.PRIVATE_CONNEXION) {
-			throw new IllegalArgumentException("wrong opcode waiting for private connection opcode");
-		}
 		DataText dataLogin = new DataText(loginReceived);
 		return new DataPrivateConnectionRejected(opcode, dataLogin);
+	}
+	
+	static Data createDataConnectionClient(StandardOperation opcode, byte connexion, String login, Optional<String> password) {
+		Objects.requireNonNull(login);
+		Objects.requireNonNull(password);
+		DataText dataLogin = new DataText(login);
+		Optional<DataText> dataPasssword = password.isEmpty() ? Optional.empty() : Optional.of(new DataText(password.get()));
+		return new DataConnectionClient(opcode, connexion, dataLogin, dataPasssword);
 	}
 }

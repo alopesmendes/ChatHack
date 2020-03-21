@@ -1,8 +1,12 @@
 package fr.upem.net.tcp.reader.frames;
 
 import java.nio.ByteBuffer;
+import java.util.Optional;
 
+import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.frame.Frame;
+import fr.upem.net.tcp.frame.FrameVisitor;
+import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 import fr.upem.net.tcp.reader.basics.StringReader;
@@ -14,7 +18,6 @@ public class FramePublicConnectReader implements Reader<Frame> {
 		DONE, WAITING_OP_CODE,WAITING_CONNEXION_TYPE,WAITING_LOGIN, ERROR
 	};	
 	
-	private final ByteBuffer bb;
 	private State state = State.WAITING_OP_CODE;
 	private final StringReader stringReader;
 	private final ByteReader byteReader;
@@ -22,43 +25,49 @@ public class FramePublicConnectReader implements Reader<Frame> {
 	private Byte op_code;
 	private Byte connexionType;
 	private String login;
+	private Frame frame;
 	
 	/**
 	 * @param bb
 	 */
 	public FramePublicConnectReader(ByteBuffer bb) {
-		this.bb = bb;
 		this.stringReader = new StringReader(bb);
 		this.byteReader = new ByteReader(bb);
 	}
 
 	
 	@Override
-	public ProcessStatus process() {
+	public ProcessStatus process(FrameVisitor fv) {
 //		if (state==State.DONE || state==State.ERROR) {
 //			throw new IllegalStateException();
 //		}
 		switch (state) {
 		case WAITING_OP_CODE:
-			ProcessStatus opStatus = byteReader.process();
+			ProcessStatus opStatus = byteReader.process(fv);
 			if (opStatus != ProcessStatus.DONE) {
 				return opStatus;
 			}
 			op_code = byteReader.get();
+			if (op_code != StandardOperation.CONNEXION.opcode()) {
+				return ProcessStatus.ERROR;
+			}
 			byteReader.reset();
 			state = State.WAITING_CONNEXION_TYPE;
 			
 		case WAITING_CONNEXION_TYPE:
-			ProcessStatus typeStatus = byteReader.process();
+			ProcessStatus typeStatus = byteReader.process(fv);
 			if (typeStatus != ProcessStatus.DONE) {
 				return typeStatus;
 			}
 			connexionType = byteReader.get();
+			if (connexionType != 0 && connexionType != 1) {
+				return ProcessStatus.ERROR;
+			}
 			byteReader.reset();
 			state = State.WAITING_LOGIN;
 			
 		case WAITING_LOGIN:
-			ProcessStatus loginStatus = stringReader.process();
+			ProcessStatus loginStatus = stringReader.process(fv);
 			if (loginStatus != ProcessStatus.DONE) {
 				return loginStatus;
 			}
@@ -66,6 +75,7 @@ public class FramePublicConnectReader implements Reader<Frame> {
 			
 			stringReader.reset();
 			state = State.DONE;
+			frame = fv.call(Data.createDataConnectionClient(StandardOperation.CONNEXION, connexionType, login, Optional.empty()));
 			return ProcessStatus.DONE;
 			
 		default:
@@ -79,7 +89,7 @@ public class FramePublicConnectReader implements Reader<Frame> {
 			throw new IllegalStateException();
 		}
 		//return new PublicConnexionFrame(op_code,connexionType,login);
-		return null;
+		return frame;
 	}
 
 	@Override

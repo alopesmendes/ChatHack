@@ -2,8 +2,10 @@ package fr.upem.net.tcp.reader.frames;
 
 import java.nio.ByteBuffer;
 
-
+import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.frame.Frame;
+import fr.upem.net.tcp.frame.FrameVisitor;
+import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 
@@ -16,10 +18,9 @@ public class FrameErrorReader implements Reader<Frame> {
 		DONE, WAITING_OP_CODE,WAITING_OP_REQUEST, ERROR
 	};	
 	
-	private final ByteBuffer bb;
 	private State state = State.WAITING_OP_CODE;
 	private final ByteReader byteReader;
-	
+	private Frame frame;
 	private byte op_code;
 	private byte op_request;
 	
@@ -27,29 +28,35 @@ public class FrameErrorReader implements Reader<Frame> {
 	 * @param bb
 	 */
 	public FrameErrorReader(ByteBuffer bb) {
-		this.bb = bb;
 		this.byteReader = new ByteReader(bb);
 	}
 	
 	@Override
-	public ProcessStatus process() {
+	public ProcessStatus process(FrameVisitor fv) {
 		switch(state) {
 		case WAITING_OP_CODE:
-			ProcessStatus opStatus = byteReader.process();
+			ProcessStatus opStatus = byteReader.process(fv);
 			if (opStatus != ProcessStatus.DONE) {
 				return opStatus;
 			}
 			op_code = byteReader.get();
+			if (op_code != StandardOperation.ERROR.opcode()) {
+				return ProcessStatus.ERROR;
+			}
 			byteReader.reset();
 			state = State.WAITING_OP_REQUEST;
 		case WAITING_OP_REQUEST:
-			ProcessStatus requestStatus = byteReader.process();
+			ProcessStatus requestStatus = byteReader.process(fv);
 			if (requestStatus != ProcessStatus.DONE) {
 				return requestStatus;
 			}
 			op_request = byteReader.get();
+			if (op_request < 0) {
+				return ProcessStatus.ERROR;
+			}
 			byteReader.reset();
 			state = State.DONE;
+			frame = fv.call(Data.createDataError(StandardOperation.ERROR, op_request));
 			return ProcessStatus.DONE;
 		default:
 			throw new AssertionError();
@@ -61,8 +68,7 @@ public class FrameErrorReader implements Reader<Frame> {
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
-		//return Frame.createFrameError();
-		return null;
+		return frame;
 	}
 
 	@Override
