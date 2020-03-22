@@ -2,7 +2,6 @@ package fr.upem.net.tcp.reader.basics;
 
 import java.nio.ByteBuffer;
 
-import fr.upem.net.tcp.frame.FrameVisitor;
 import fr.upem.net.tcp.reader.Reader;
 
 
@@ -24,7 +23,7 @@ public class LongReader implements Reader<Long> {
 	}
 
 	@Override
-	public ProcessStatus process(FrameVisitor fv) {
+	public ProcessStatus process() {
 		if (state==State.DONE || state==State.ERROR) {
             throw new IllegalStateException();
         }

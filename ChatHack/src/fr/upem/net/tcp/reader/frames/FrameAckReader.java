@@ -2,14 +2,13 @@ package fr.upem.net.tcp.reader.frames;
 
 import java.nio.ByteBuffer;
 
-import fr.upem.net.tcp.frame.Frame;
-import fr.upem.net.tcp.frame.FrameVisitor;
+import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 
 
-public class FrameAckReader implements Reader<Frame> {
+public class FrameAckReader implements Reader<Data> {
 	
 	private enum State {
 		DONE, WAITING_OP_CODE,WAITING_OP_REQUEST, ERROR
@@ -29,10 +28,10 @@ public class FrameAckReader implements Reader<Frame> {
 	}
 	
 	@Override
-	public ProcessStatus process(FrameVisitor fv) {
+	public ProcessStatus process() {
 		switch(state) {
 		case WAITING_OP_CODE:
-			ProcessStatus opStatus = byteReader.process(fv);
+			ProcessStatus opStatus = byteReader.process();
 			if (opStatus != ProcessStatus.DONE) {
 				return opStatus;
 			}
@@ -43,7 +42,7 @@ public class FrameAckReader implements Reader<Frame> {
 			byteReader.reset();
 			state = State.WAITING_OP_REQUEST;
 		case WAITING_OP_REQUEST:
-			ProcessStatus requestStatus = byteReader.process(fv);
+			ProcessStatus requestStatus = byteReader.process();
 			if (requestStatus != ProcessStatus.DONE) {
 				return requestStatus;
 			}
@@ -60,7 +59,7 @@ public class FrameAckReader implements Reader<Frame> {
 	}
 
 	@Override
-	public Frame get() {
+	public Data get() {
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}

@@ -11,18 +11,17 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.frame.Frame;
 import fr.upem.net.tcp.frame.FrameVisitor;
-import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
-import fr.upem.net.tcp.reader.frames.FrameGlobalSendingReader;
+import fr.upem.net.tcp.reader.SelectReaderOpcode;
 
 public class ServerChatHack {
 	
@@ -32,9 +31,9 @@ public class ServerChatHack {
 		final private SocketChannel sc;
 		final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 		final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
-		final private Queue<ByteBuffer> queue = new LinkedList<>();
+		final private BlockingQueue<ByteBuffer> queue = new LinkedBlockingQueue<>();
 		final private ServerChatHack server;
-		final private Reader<Frame> reader;
+		final private Reader<Data> reader;
 		private boolean closed = false;
 		final private FrameVisitor fv;
 
@@ -42,8 +41,9 @@ public class ServerChatHack {
 			this.key = key;
 			this.sc = (SocketChannel) key.channel();
 			this.server = server;
-			reader = new FrameGlobalSendingReader(bbin, login);
-			fv = FrameVisitor.create();
+			reader = SelectReaderOpcode.create(bbin);
+			fv = new FrameVisitor().when(Data.DataGlobalClient.class, d -> Frame.createFrameGlobal(d.transformTo(login))).
+			when(Data.DataError.class, d -> Frame.createFrameError(d));
 		}
 
 		/**
@@ -57,21 +57,22 @@ public class ServerChatHack {
 		 */
 		private void processIn() throws IOException {
 			for (;;) {
-				Reader.ProcessStatus status = reader.process(fv);
+				Reader.ProcessStatus status = reader.process();
 				switch (status) {
 				case DONE:
-					Frame frame = reader.get();
-					server.broadcast(frame);
+					Data frame = reader.get();
+					server.broadcast(fv.call(frame));
 					reader.reset();
 					break;
 				case REFILL:
 					return;
 				case ERROR:
 					logger.info("request fail sending error frame");
-					queueMessage(fv.call(Data.createDataError(StandardOperation.ERROR, (byte)1)));
+					//queueMessage(fv.call(Data.createDataError(StandardOperation.ERROR, (byte)1)));
 					//silentlyClose();
 					return;
 				}
+				
 			}
 		}
 

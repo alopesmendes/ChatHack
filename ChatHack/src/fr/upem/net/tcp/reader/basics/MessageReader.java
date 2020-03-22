@@ -2,7 +2,6 @@ package fr.upem.net.tcp.reader.basics;
 
 import java.nio.ByteBuffer;
 
-import fr.upem.net.tcp.frame.FrameVisitor;
 import fr.upem.net.tcp.reader.Reader;
 
 
@@ -24,7 +23,7 @@ public class MessageReader implements Reader<Message> {
 	}
 
 	@Override
-	public ProcessStatus process(FrameVisitor fv) {
+	public ProcessStatus process() {
 		// TODO Auto-generated method stub
 //		if (state==State.DONE || state==State.ERROR) {
 //			throw new IllegalStateException();
@@ -32,7 +31,7 @@ public class MessageReader implements Reader<Message> {
 
 		switch (state) {
 		case WAITING_LOGIN:
-			ProcessStatus loginStatus = stringReader.process(fv);
+			ProcessStatus loginStatus = stringReader.process();
 			if (loginStatus != ProcessStatus.DONE) {
 				return loginStatus;
 			}
@@ -41,7 +40,7 @@ public class MessageReader implements Reader<Message> {
 			state = State.WAITING_MSG;
 
 		case WAITING_MSG:
-			ProcessStatus msgStatus = stringReader.process(fv);
+			ProcessStatus msgStatus = stringReader.process();
 			if (msgStatus != ProcessStatus.DONE) {
 				return msgStatus;
 			}

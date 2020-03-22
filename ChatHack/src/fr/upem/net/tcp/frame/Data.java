@@ -98,6 +98,12 @@ public interface Data {
 			DataGlobalClient d = (DataGlobalClient)obj;
 			return step==d.step && opcode==d.opcode && d.message.equals(message);
 		}
+		
+		public DataGlobalServer transformTo(String pseudo) {
+			Objects.requireNonNull(pseudo);
+			DataText pseudoData = new DataText(pseudo);
+			return new DataGlobalServer(opcode, (byte)(step+1), pseudoData, message);
+		}
 	}
 	
 	static class DataError implements Data {

@@ -7,7 +7,7 @@ public interface Reader<E> {
 		DONE, REFILL, ERROR;
 	}
 	
-	ProcessStatus process(FrameVisitor fv);
+	ProcessStatus process();
 	
 	E get();
 	

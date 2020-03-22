@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -21,10 +20,10 @@ import fr.upem.net.tcp.frame.Frame;
 import fr.upem.net.tcp.frame.FrameVisitor;
 import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
-import fr.upem.net.tcp.reader.frames.FrameGlobalReceivingReader;
+import fr.upem.net.tcp.reader.SelectReaderOpcode;
 
 public class ChatChaton {
-	static private int BUFFER_SIZE = 4_048;
+	static private int BUFFER_SIZE = 1_024;
 	static private Logger logger = Logger.getLogger(ChatChaton.class.getName());
 	private final SocketChannel sc;
 	private final Selector selector;
@@ -36,13 +35,16 @@ public class ChatChaton {
 	private final ReentrantLock lock = new ReentrantLock();
 	private boolean cancel;
 	private final FrameVisitor fv;
-	private final Reader<Frame> reader = new FrameGlobalReceivingReader(bbin);
+	private final Reader<Data> reader = SelectReaderOpcode.create(bbin);
 
 	public ChatChaton(String host, int port, String login) throws IOException {
 		serverAddress = new InetSocketAddress(host, port);
 		sc = SocketChannel.open();
 		selector = Selector.open();
-		fv = FrameVisitor.create();
+		fv = new FrameVisitor().when(Data.DataGlobalServer.class, d -> Frame.createFrameGlobal(d)).
+		when(Data.DataGlobalClient.class, d -> Frame.createFrameGlobal(d)).
+		when(Data.DataError.class, d -> Frame.createFrameError(d)).
+		when(Data.DataConnectionClient.class, d -> Frame.createFrameConnection(d));
 	}
 	
 	public void launch() throws IOException {
@@ -93,23 +95,29 @@ public class ChatChaton {
 	
 	private void brodcast(ByteBuffer bb) {
 		try {
-			if (bb.remaining() < 2 * Byte.BYTES) {
+			int fLimit = bb.limit();
+			if (bb.remaining()< 2*Byte.BYTES) {
 				return;
 			}
-			int fLimit = bb.limit();
 			bb.get();
 			bb.get();
-			if (bb.remaining() < Integer.BYTES) {
+			if (bb.remaining()<Integer.BYTES) {
+				bb.limit(fLimit);
 				return;
 			}
 			int size = bb.getInt();
-			bb.limit(bb.position()+size);
+			bb.limit(bb.position()+ size);
 			String login = StandardCharsets.UTF_8.decode(bb).toString();
 			bb.limit(fLimit);
+			if (bb.remaining()<Integer.BYTES) {
+				bb.limit(fLimit);
+				return;
+			}
 			size = bb.getInt();
 			bb.limit(bb.position()+size);
-			String message = StandardCharsets.UTF_8.decode(bb).toString();
-			System.out.println(login+":"+message);
+			String text = StandardCharsets.UTF_8.decode(bb).toString();
+			bb.limit(fLimit);
+			System.out.println(login+":"+text);
 		} finally {
 			bb.flip();
 		}
@@ -117,17 +125,18 @@ public class ChatChaton {
 	
 	private void processIn() {
 		for (;;) {
-			Reader.ProcessStatus status = reader.process(fv);
+			Reader.ProcessStatus status = reader.process();
 			switch (status) {
 			case DONE:
-				Frame value = reader.get();
-				brodcast(value.buffer());
+				Data value = reader.get();
+				brodcast(fv.call(value).buffer());
 				reader.reset();
 				break;
 			case REFILL:
 				return;
 			case ERROR:
-				//silentlyClose(uniqueKey);
+				logger.info("bad package");	
+				//silentlyClose();
 				return;
 			}
 		}
@@ -176,13 +185,12 @@ public class ChatChaton {
 		}
 
 		if (interestOps == 0) {
-			silentlyClose(uniqueKey);
+			silentlyClose();
 		}
 		uniqueKey.interestOps(interestOps);
 	}
 
-	private void silentlyClose(SelectionKey key) {
-		Channel sc = (Channel) key.channel();
+	private void silentlyClose() {
 		try {
 			sc.close();
 		} catch (IOException e) {
