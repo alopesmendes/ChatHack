@@ -3,6 +3,7 @@ package fr.upem.net.tcp.nonblocking;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.SelectableChannel;
@@ -11,7 +12,9 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.logging.Level;
@@ -20,6 +23,7 @@ import java.util.logging.Logger;
 import fr.upem.net.tcp.frame.Frame;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.MessageReader;
+import fr.upem.net.tcp.reader.frames.FramePublicConnectReader;
 
 public class ServerChatHack {
 	
@@ -33,7 +37,7 @@ public class ServerChatHack {
 		final private ServerChatHack server;
 		private boolean closed = false;
 
-		private final Reader messageReader = new MessageReader();
+		private final Reader<Frame> messageReader = new FramePublicConnectReader(bbin);
 
 		private Context(ServerChatHack server, SelectionKey key) {
 			this.key = key;
@@ -169,12 +173,25 @@ public class ServerChatHack {
 			updateInterestOps();
 		}
 
+		public void doConnect() throws IOException {
+			if (!sc.finishConnect()){
+				return;
+			}
+			updateInterestOps();
+		}
+
 	}
 	
 	static private int BUFFER_SIZE = 1_024;
 	static private Logger logger = Logger.getLogger(ServerChatHack.class.getName());
 
 	private final ServerSocketChannel serverSocketChannel;
+	private final SocketAddress serverPasswordAdress;
+	private SelectionKey uniqueKey;
+	private final ByteBuffer bbin = ByteBuffer.allocateDirect(BUFFER_SIZE);
+	private final ByteBuffer bbout = ByteBuffer.allocateDirect(BUFFER_SIZE);
+	private final Map<Long,Context> requestMap = new HashMap<>();
+	private final SocketChannel scPassword;
 	private final Selector selector;
 	
 	
@@ -182,12 +199,22 @@ public class ServerChatHack {
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
 		selector = Selector.open();
+		serverPasswordAdress = new InetSocketAddress("localhost", 4545);
+		scPassword = SocketChannel.open();
 	}
 	
 	
 	public void launch() throws IOException {
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+		
+		scPassword.configureBlocking(false);
+		scPassword.connect(serverPasswordAdress);
+		logger.info("Connnected to DataBase server:"+serverPasswordAdress);
+		uniqueKey=scPassword.register(selector, SelectionKey.OP_CONNECT);
+		uniqueKey.attach(new Context(this, uniqueKey));
+		
+		
 		while (!Thread.interrupted()) {
 			printKeys(); // for debug
 			System.out.println("Starting select");
@@ -211,6 +238,9 @@ public class ServerChatHack {
 			throw new UncheckedIOException(ioe);
 		}
 		try {
+			if (key.isValid() && key.isConnectable()) {
+				((Context)key.attachment()).doConnect();
+			}
 			if (key.isValid() && key.isWritable()) {
 				((Context) key.attachment()).doWrite();
 			}
@@ -223,6 +253,34 @@ public class ServerChatHack {
 		}
 	}
 	
+	
+	
+
+
+//	private void updateInterestsOps() {
+//		
+//		
+//	}
+//	
+//	private void processIn() {
+//		bbin.flip();
+//		while (bbin.remaining() >= Long.BYTES+Byte.BYTES && bbout.remaining() >= Long.BYTES+Byte.BYTES) {
+//			long id = bbin.getLong();
+//			byte answer = bbin.get();
+//			logger.info("Received Request"+id+":"+answer);
+//		}
+//		bbin.compact();
+//	}
+//	
+//	private void processOut() {
+////		while (bbout.remaining()>=Integer.BYTES && !queue.isEmpty()) {
+////			int num = queue.remove();
+////			bbout.putInt( num );
+////		}
+//	}
+
+
+
 	private void doAccept(SelectionKey key) throws IOException {
 		// TODO
 		SocketChannel sc = serverSocketChannel.accept();
