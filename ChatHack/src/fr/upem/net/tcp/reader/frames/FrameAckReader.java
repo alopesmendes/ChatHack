@@ -3,55 +3,43 @@ package fr.upem.net.tcp.reader.frames;
 import java.nio.ByteBuffer;
 
 import fr.upem.net.tcp.frame.Data;
-import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
-import fr.upem.net.tcp.reader.basics.ByteReader;
+import fr.upem.net.tcp.reader.basics.LongReader;
 
 
 public class FrameAckReader implements Reader<Data> {
 	
 	private enum State {
-		DONE, WAITING_OP_CODE,WAITING_OP_REQUEST, ERROR
+		DONE,WAITING_ID, ERROR
 	};	
 	
-	private State state = State.WAITING_OP_CODE;
-	private final ByteReader byteReader;
+	private State state = State.WAITING_ID;
+	private final LongReader longReader;
 	
 	private byte op_code;
-	private byte op_request;
+	private long id;
+	private Data data;
 	
 	/**
 	 * @param bb
 	 */
-	public FrameAckReader(ByteBuffer bb) {
-		this.byteReader = new ByteReader(bb);
+	public FrameAckReader(ByteBuffer bb, byte op_code) {
+		this.longReader = new LongReader(bb);
+		this.op_code = op_code;
 	}
 	
 	@Override
 	public ProcessStatus process() {
 		switch(state) {
-		case WAITING_OP_CODE:
-			ProcessStatus opStatus = byteReader.process();
-			if (opStatus != ProcessStatus.DONE) {
-				return opStatus;
-			}
-			op_code = byteReader.get();
-			if (op_code != StandardOperation.ACK.opcode()) {
-				return ProcessStatus.ERROR;
-			}
-			byteReader.reset();
-			state = State.WAITING_OP_REQUEST;
-		case WAITING_OP_REQUEST:
-			ProcessStatus requestStatus = byteReader.process();
+		case WAITING_ID:
+			ProcessStatus requestStatus = longReader.process();
 			if (requestStatus != ProcessStatus.DONE) {
 				return requestStatus;
 			}
-			op_request = byteReader.get();
-			if (op_request < 0) {
-				return ProcessStatus.ERROR;
-			}
-			byteReader.reset();
+			id = longReader.get();
+			longReader.reset();
 			state = State.DONE;
+			data = Data.createDataConnectionServerMdpReponse(op_code, id);
 			return ProcessStatus.DONE;
 		default:
 			throw new AssertionError();
@@ -63,13 +51,13 @@ public class FrameAckReader implements Reader<Data> {
 		if (state != State.DONE) {
 			throw new IllegalStateException();
 		}
-		return null;
+		return data;
 	}
 
 	@Override
 	public void reset() {
-		state = State.WAITING_OP_CODE;
-		byteReader.reset();
+		state = State.WAITING_ID;
+		longReader.reset();
 		
 	}
 

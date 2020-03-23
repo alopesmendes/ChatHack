@@ -267,6 +267,86 @@ public interface Data {
 					&& d.login.equals(login) && password.equals(d.password);
 		}
 		
+		public String login() {
+			return login.text;
+		}
+	}
+	
+	static class DataConnectionServerMdp implements Data {
+		final byte typeConnexion;
+		final long id;
+		final DataText login;
+		final Optional<DataText> password;
+		/**
+		 * @param typeConnexion a byte.
+		 * @param id a long.
+		 * @param login a dataText.
+		 * @param password a Optional of DataText.
+		 */
+		private DataConnectionServerMdp(byte typeConnexion, long id, DataText login, Optional<DataText> password) {
+			this.typeConnexion = typeConnexion;
+			this.id = id;
+			this.login = login;
+			this.password = password;
+		}
+		
+		@Override
+		public int hashCode() {
+			return	Byte.hashCode(typeConnexion) ^ Long.hashCode(id)
+					^ login.hashCode() ^ password.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataConnectionServerMdp)) {
+				return false;
+			}
+			DataConnectionServerMdp d = (DataConnectionServerMdp)obj;
+			return 	d.typeConnexion==typeConnexion && id==d.id && login.equals(d.login)
+					&& password.equals(d.password);
+		}
+		
+		public long getId() {
+			return id;
+		}
+		
+	}
+	
+	static class DataConnectionServerMdpReponse implements Data {
+		final byte opcode;
+		final long id;
+		/**
+		 * Constructs a DataConnectionServerMdpReponse with it's byte and id.
+		 * @param opcode a byte
+		 * @param id a long
+		 */
+		private DataConnectionServerMdpReponse(byte opcode, long id) {
+			this.opcode = opcode;
+			this.id = id;
+		}
+
+		@Override
+		public int hashCode() {
+			return Byte.hashCode(opcode) ^ Long.hashCode(id);
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataConnectionServerMdpReponse)) {
+				return false;
+			}
+			DataConnectionServerMdpReponse d = (DataConnectionServerMdpReponse)obj;
+			return opcode==d.opcode && id==d.id;
+		}
+		
+		public byte getOpcode() {
+			return opcode;
+		}
+		
+		public long getId() {
+			return id;
+		}
+		
 	}
 	
 	/**
@@ -274,7 +354,7 @@ public interface Data {
 	 * @param text a string
 	 * @return DataText.
 	 */
-	static Data createDataText(String text) {
+	static DataText createDataText(String text) {
 		Objects.requireNonNull(text);
 		return new DataText(text);
 	}
@@ -287,7 +367,7 @@ public interface Data {
 	 * @param message a string
 	 * @return DataGlobalServer.
 	 */
-	static Data createDataGlobalServer(StandardOperation opcode, byte step, String pseudo, String message) {
+	static DataGlobalServer createDataGlobalServer(StandardOperation opcode, byte step, String pseudo, String message) {
 		Objects.requireNonNull(pseudo);
 		Objects.requireNonNull(message);
 		DataText pseudoData = new DataText(pseudo);
@@ -302,18 +382,19 @@ public interface Data {
 	 * @param message a string
 	 * @return DataGlobalClient.
 	 */
-	static Data createDataGlobalClient(StandardOperation opcode, byte step, String message) {
+	static DataGlobalClient createDataGlobalClient(StandardOperation opcode, byte step, String message) {
 		Objects.requireNonNull(message);
 		DataText messageData = new DataText(message);
 		return new DataGlobalClient(opcode, step, messageData);
 	}
+	
 	/**
 	 * Creates a DataError.
 	 * @param opcode
 	 * @param requestCode
 	 * @return DataError.
 	 */
-	static Data createDataError(StandardOperation opcode, byte requestCode) {
+	static DataError createDataError(StandardOperation opcode, byte requestCode) {
 		return new DataError(opcode, requestCode);
 	}
 	
@@ -324,7 +405,7 @@ public interface Data {
 	 * @param loginRequest a String.
 	 * @return DataPrivateConnectionRequested
 	 */
-	static Data createDataPrivateConnectionRequested(StandardOperation opcode, String loginRequest) {
+	static DataPrivateConnectionRequested createDataPrivateConnectionRequested(StandardOperation opcode, String loginRequest) {
 		Objects.requireNonNull(loginRequest);
 		DataText dataLogin = new DataText(loginRequest);
 		return new DataPrivateConnectionRequested(opcode, dataLogin);
@@ -338,7 +419,7 @@ public interface Data {
 	 * @param token a long.
 	 * @return DataPrivateConnectionAccepted.
 	 */
-	static Data createDataPrivateConnectionAccepted(StandardOperation opcode, String loginReceiver, String socketAdress, long token) {
+	static DataPrivateConnectionAccepted createDataPrivateConnectionAccepted(StandardOperation opcode, String loginReceiver, String socketAdress, long token) {
 		Objects.requireNonNull(loginReceiver);
 		Objects.requireNonNull(socketAdress);
 		DataText dLogin = new DataText(loginReceiver);
@@ -352,17 +433,46 @@ public interface Data {
 	 * @param loginReceived a String.
 	 * @return DataPrivateConnectionRejected.
 	 */
-	static Data createDataPrivateConnectionRejected(StandardOperation opcode, String loginReceived) {
+	static DataPrivateConnectionRejected createDataPrivateConnectionRejected(StandardOperation opcode, String loginReceived) {
 		Objects.requireNonNull(loginReceived);
 		DataText dataLogin = new DataText(loginReceived);
 		return new DataPrivateConnectionRejected(opcode, dataLogin);
 	}
 	
-	static Data createDataConnectionClient(StandardOperation opcode, byte connexion, String login, Optional<String> password) {
+	/**
+	 * Creates a DataConnectionClient.
+	 * @param opcode a StandardOperation
+	 * @param connexion a byte.
+	 * @param login a String
+	 * @param password a Optional<String>
+	 * @return DataConnectionClient.
+	 */
+	static DataConnectionClient createDataConnectionClient(StandardOperation opcode, byte connexion, String login, Optional<String> password) {
 		Objects.requireNonNull(login);
 		Objects.requireNonNull(password);
 		DataText dataLogin = new DataText(login);
 		Optional<DataText> dataPasssword = password.isEmpty() ? Optional.empty() : Optional.of(new DataText(password.get()));
 		return new DataConnectionClient(opcode, connexion, dataLogin, dataPasssword);
+	}
+	
+	/**
+	 * Creates a DataConnectionServerMDP.
+	 * @param data a DataConnectionClient.
+	 * @return DataConnectionServerMdp.
+	 */
+	static DataConnectionServerMdp createDataConnectionServerMdp(DataConnectionClient data) {
+		Objects.requireNonNull(data);
+		byte typeConnexion;
+		if (data.connexion == 0) {
+			typeConnexion = 1;
+		} else {
+			typeConnexion = 2;
+		}
+		return new DataConnectionServerMdp(typeConnexion, System.currentTimeMillis(), data.login, data.password);
+	}
+	
+	static DataConnectionServerMdpReponse createDataConnectionServerMdpReponse(byte opcode, long id) {
+		return new DataConnectionServerMdpReponse(opcode, id);
+		
 	}
 }

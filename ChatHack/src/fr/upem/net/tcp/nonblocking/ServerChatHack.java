@@ -3,6 +3,7 @@ package fr.upem.net.tcp.nonblocking;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.SelectableChannel;
@@ -11,6 +12,8 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -32,18 +35,38 @@ public class ServerChatHack {
 		final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 		final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 		final private BlockingQueue<ByteBuffer> queue = new LinkedBlockingQueue<>();
-		final private ServerChatHack server;
+		//final private ServerChatHack server;
 		final private Reader<Data> reader;
 		private boolean closed = false;
 		final private FrameVisitor fv;
+		private String login;
 
-		private Context(ServerChatHack server, SelectionKey key, String login) {
+		private Context(ServerChatHack server, SelectionKey key) {
 			this.key = key;
 			this.sc = (SocketChannel) key.channel();
-			this.server = server;
+			//this.server = server;
 			reader = SelectReaderOpcode.create(bbin);
-			fv = new FrameVisitor().when(Data.DataGlobalClient.class, d -> Frame.createFrameGlobal(d.transformTo(login))).
-			when(Data.DataError.class, d -> Frame.createFrameError(d));
+			fv = new FrameVisitor().when(Data.DataGlobalClient.class, d -> {
+				Frame frame = Frame.createFrameGlobal(d.transformTo(login));
+				server.broadcast(frame);
+				return frame;}).
+			when(Data.DataConnectionClient.class, d -> {
+				login = d.login();
+				Data.DataConnectionServerMdp data = Data.createDataConnectionServerMdp(d);
+				Frame frame = Frame.createFrameConnectionMdp(data);
+				Context context = (Context) server.uniqueKey.attachment();
+				context.queueMessage(frame);
+				server.requestMap.put(data.getId(), this);
+				return frame;}).
+			when(Data.DataConnectionServerMdpReponse.class, d -> {
+				Frame frame = Frame.createFrameConnectMdpServer(d);
+				Context context = server.requestMap.computeIfAbsent(d.getId(), id -> {throw new AssertionError();});
+				context.queueMessage(frame);
+				return frame;}).
+			when(Data.DataError.class, d -> {
+				Frame frame = Frame.createFrameError(d);
+				queueMessage(frame);
+				return frame;});
 		}
 
 		/**
@@ -61,7 +84,7 @@ public class ServerChatHack {
 				switch (status) {
 				case DONE:
 					Data frame = reader.get();
-					server.broadcast(fv.call(frame));
+					fv.call(frame);
 					reader.reset();
 					break;
 				case REFILL:
@@ -69,7 +92,7 @@ public class ServerChatHack {
 				case ERROR:
 					logger.info("request fail sending error frame");
 					//queueMessage(fv.call(Data.createDataError(StandardOperation.ERROR, (byte)1)));
-					//silentlyClose();
+					silentlyClose();
 					return;
 				}
 				
@@ -165,19 +188,30 @@ public class ServerChatHack {
 			processOut();
 			updateInterestOps();
 		}
+		
+		private void doConnect() throws IOException {
+			if (!sc.finishConnect()) {
+				return;
+			}
+			updateInterestOps();
+		}
 	}
 	static private int BUFFER_SIZE = 1_024;
 	static private Logger logger = Logger.getLogger(ServerChatHack.class.getName());
-
+	private final SocketAddress serverPasswordAdress;
+	private SelectionKey uniqueKey;
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
-	private int cpt;
+	private final Map<Long, Context> requestMap = new HashMap<>();
+	private final SocketChannel scPassword;
 	
 	
 	public ServerChatHack(int port) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
 		selector = Selector.open();
+		serverPasswordAdress = new InetSocketAddress("localhost", 4545);
+		scPassword = SocketChannel.open();
 	}
 	
 	
@@ -185,11 +219,19 @@ public class ServerChatHack {
 		
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
+		
+		scPassword.configureBlocking(false);
+		scPassword.connect(serverPasswordAdress);
+		logger.info("Connnected to DataBase server:"+serverPasswordAdress);
+		uniqueKey=scPassword.register(selector, SelectionKey.OP_CONNECT);
+		uniqueKey.attach(new Context(this, uniqueKey));
+		
 		while (!Thread.interrupted()) {
 			printKeys(); // for debug
 			System.out.println("Starting select");
 			try {
 				selector.select(this::treatKey);
+				
 			} catch (UncheckedIOException tunneled) {
 				throw tunneled.getCause();
 			}
@@ -208,6 +250,9 @@ public class ServerChatHack {
 			throw new UncheckedIOException(ioe);
 		}
 		try {
+			if (key.isValid() && key.isConnectable()) {
+				((Context) key.attachment()).doConnect();
+			}
 			if (key.isValid() && key.isWritable()) {
 				((Context) key.attachment()).doWrite();
 			}
@@ -227,7 +272,7 @@ public class ServerChatHack {
 		if (sc != null) {
 			sc.configureBlocking(false);
 			SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
-			clientKey.attach(new Context(this, clientKey, "Ailton"+cpt++));
+			clientKey.attach(new Context(this, clientKey));
 		}
 	}
 
@@ -248,7 +293,7 @@ public class ServerChatHack {
 	private void broadcast(Frame value) {
 		for (SelectionKey key : selector.keys()) {
 			Context ctx = (Context) key.attachment();
-			if (ctx == null) {
+			if (ctx == null || key.equals(uniqueKey)) {
 				continue;
 			}
 			ctx.queueMessage(value);

@@ -4,6 +4,8 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 
 import fr.upem.net.tcp.frame.Data.DataConnectionClient;
+import fr.upem.net.tcp.frame.Data.DataConnectionServerMdp;
+import fr.upem.net.tcp.frame.Data.DataConnectionServerMdpReponse;
 import fr.upem.net.tcp.frame.Data.DataError;
 import fr.upem.net.tcp.frame.Data.DataGlobalClient;
 import fr.upem.net.tcp.frame.Data.DataGlobalServer;
@@ -50,5 +52,20 @@ public interface Frame {
 	static Frame createFrameConnection(DataConnectionClient dataConnection) {
 		Objects.requireNonNull(dataConnection);
 		return new FrameConnectionClient(dataConnection);
+	}
+	
+	/**
+	 * Creates a FrameConnectionMdp.
+	 * @param data a DataConnectionServerMdp.
+	 * @return FrameConnectMdp.
+	 */
+	static Frame createFrameConnectionMdp(DataConnectionServerMdp data) {
+		Objects.requireNonNull(data);
+		return new FrameConnectMdp(data);
+	}
+	 
+	static Frame createFrameConnectMdpServer(DataConnectionServerMdpReponse data) {
+		Objects.requireNonNull(data);
+		return new FrameConnectMdpServer(data);
 	}
 }
