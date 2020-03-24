@@ -134,9 +134,10 @@ public interface Data {
 			return d.opcode==opcode && d.requestCode==requestCode;
 		}
 	}
-	
+		
 	static class DataPrivateConnectionRequested implements Data {
 		final StandardOperation opcode;
+		final byte step;
 		final DataText loginRequest;
 		
 		/**
@@ -144,14 +145,15 @@ public interface Data {
 		 * @param opcode a StandardOperation
 		 * @param loginRequest a DataText
 		 */
-		private DataPrivateConnectionRequested(StandardOperation opcode, DataText loginRequest) {
+		private DataPrivateConnectionRequested(StandardOperation opcode, byte step, DataText loginRequest) {
 			this.opcode = opcode;
+			this.step = step;
 			this.loginRequest = Objects.requireNonNull(loginRequest);
 		}
 		
 		@Override
 		public int hashCode() {
-			return Byte.hashCode(opcode.opcode()) ^ loginRequest.hashCode();
+			return Byte.hashCode(opcode.opcode()) ^ Byte.hashCode(step) ^ loginRequest.hashCode();
 		}
 		
 		@Override
@@ -160,14 +162,66 @@ public interface Data {
 				return false;
 			}
 			DataPrivateConnectionRequested d = (DataPrivateConnectionRequested)obj;
-			return d.opcode==opcode && loginRequest.equals(d.loginRequest);
+			return d.opcode==opcode && d.step==step && loginRequest.equals(d.loginRequest);
 		}
+		
+		public byte step() {
+			return step;
+		}
+		
+		public StandardOperation opcode() {
+			return opcode;
+		}
+		
+		public String login() {
+			return loginRequest.text;
+		}
+	}
+	
+	static class DataPrivateConnectionReponse implements Data {
+		final DataPrivateConnectionRequested dataPrivateConnectionRequested;
+		final byte state;
+		
+		/**
+		 * Constructs a DataPrivateConnectionReponse.
+		 * @param dataPrivateConnectionRequested a DataPrivateConnectionReponse.
+		 * @param state a byte.
+		 */
+		public DataPrivateConnectionReponse(DataPrivateConnectionRequested dataPrivateConnectionRequested, byte state) {
+			this.dataPrivateConnectionRequested = dataPrivateConnectionRequested;
+			this.state = state;
+		}
+		
+		@Override
+		public int hashCode() {
+			return dataPrivateConnectionRequested.hashCode() ^ Byte.hashCode(state);
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataPrivateConnectionReponse)) {
+				return false;
+			}
+			DataPrivateConnectionReponse d = (DataPrivateConnectionReponse)obj;
+			return d.state==state && d.dataPrivateConnectionRequested.equals(dataPrivateConnectionRequested);
+		}
+		
+		public String login() {
+			return dataPrivateConnectionRequested.loginRequest.text;
+		}
+		
+		public byte state() {
+			return state;
+		}
+		
 	}
 	
 	static class DataPrivateConnectionAccepted implements Data {
 		final StandardOperation opcode;
+		final byte step;
 		final DataText loginReceiver;
-		final DataText socketAdress;
+		final int port;
+		final DataText host;
 		final long token;
 		
 		/**
@@ -177,18 +231,20 @@ public interface Data {
 		 * @param socketAdress a DataText.
 		 * @param token a long.
 		 */
-		private DataPrivateConnectionAccepted(StandardOperation opcode, DataText loginReceiver, DataText socketAdress,
+		private DataPrivateConnectionAccepted(StandardOperation opcode, byte step,  DataText loginReceiver, int port, DataText host,
 				long token) {
 			this.opcode = opcode;
+			this.step = step;
 			this.loginReceiver = loginReceiver;
-			this.socketAdress = socketAdress;
+			this.host = host;
 			this.token = token;
+			this.port = port;
 		}
 		
 		@Override
 		public int hashCode() {
-			return 	Byte.hashCode(opcode.opcode())^loginReceiver.hashCode()^socketAdress.hashCode()
-					^Long.hashCode(token);
+			return 	Byte.hashCode(opcode.opcode()) ^ Byte.hashCode(opcode.opcode())  ^ loginReceiver.hashCode() 
+					^ host.hashCode() ^ Long.hashCode(token) ^ port;
 		}
 		
 		@Override
@@ -197,27 +253,86 @@ public interface Data {
 				return false;
 			}
 			DataPrivateConnectionAccepted d = (DataPrivateConnectionAccepted)obj;
-			return 	d.opcode==opcode && token==d.token 
-					&& loginReceiver.equals(d.loginReceiver) && socketAdress.equals(d.socketAdress);
+			return 	d.opcode==opcode && d.step==step && token==d.token && d.port==port
+					&& loginReceiver.equals(d.loginReceiver) && host.equals(d.host);
 		}	
+		
+		public String login() {
+			return loginReceiver.text;
+		}
+		
+		public int port() {
+			return port;
+		}
+		
+		public String host() {
+			return host.text;
+		}
+		
+		public long token() {
+			return token;
+		}
 	}
 
-	static class DataPrivateConnectionRejected implements Data {
+	static class DataPrivateConnectionConnect implements Data {
 		final StandardOperation opcode;
-		final DataText loginReceiver;
+		final byte step;
+		final DataText login;
+		final long token;
+		
 		/**
-		 * Constructs a DataPrivateConnectionRejected with it's opcode and loginReceiver.
-		 * @param opcode a StandardOperation 
-		 * @param loginReceiver a DataText
+		 * Creates a DataPrivateConnectionConnect with it's opcode, step, login and token.
+		 * @param opcode a StandardOperation.
+		 * @param step a byte.
+		 * @param login a DataText.
+		 * @param token a long.
 		 */
-		private DataPrivateConnectionRejected(StandardOperation opcode, DataText loginReceiver) {
+		private DataPrivateConnectionConnect(StandardOperation opcode, byte step, DataText login, long token) {
 			this.opcode = opcode;
-			this.loginReceiver = Objects.requireNonNull(loginReceiver);
+			this.step = step;
+			this.login = login;
+			this.token = token;
 		}
 		
 		@Override
 		public int hashCode() {
-			return Byte.hashCode(opcode.opcode())^loginReceiver.hashCode();
+			return Byte.hashCode(step) ^ Long.hashCode(token) ^ opcode.hashCode() ^ login.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataPrivateConnectionConnect)) {
+				return false;
+			}
+			DataPrivateConnectionConnect d = (DataPrivateConnectionConnect)obj;
+			return d.opcode==opcode && d.step==step && token==d.token && login.equals(d.login);
+		}
+		
+		
+	}
+	
+	static class DataPrivateConnectionRejected implements Data {
+		final StandardOperation opcode;
+		final byte requestCode;
+		final byte step;
+		
+		
+		
+		/**
+		 * Constructs a DataPrivateConnectionRejected with it's opcode, requestCode and step.
+		 * @param opcode
+		 * @param requestCode
+		 * @param step
+		 */
+		public DataPrivateConnectionRejected(StandardOperation opcode, byte requestCode, byte step) {
+			this.opcode = opcode;
+			this.requestCode = requestCode;
+			this.step = step;
+		}
+
+		@Override
+		public int hashCode() {
+			return Byte.hashCode(opcode.opcode()) ^ Byte.hashCode(requestCode) ^ Byte.hashCode(step);
 		}
 		
 		@Override
@@ -226,7 +341,7 @@ public interface Data {
 				return false;
 			}
 			DataPrivateConnectionRejected d = (DataPrivateConnectionRejected) obj;
-			return opcode==d.opcode && loginReceiver.equals(d.loginReceiver);
+			return opcode==d.opcode && requestCode==d.requestCode && step==d.step;
 		}
 		
 		
@@ -398,47 +513,6 @@ public interface Data {
 		return new DataError(opcode, requestCode);
 	}
 	
-	
-	/**
-	 * Creates a DataPrivateConnectionRequested. 
-	 * @param opcode a StandardOperation.
-	 * @param loginRequest a String.
-	 * @return DataPrivateConnectionRequested
-	 */
-	static DataPrivateConnectionRequested createDataPrivateConnectionRequested(StandardOperation opcode, String loginRequest) {
-		Objects.requireNonNull(loginRequest);
-		DataText dataLogin = new DataText(loginRequest);
-		return new DataPrivateConnectionRequested(opcode, dataLogin);
-	}
-	
-	/**
-	 * Creates a DataPrivateConnectionAccepted.
-	 * @param opcode a StandardOperation.
-	 * @param loginReceiver a String.
-	 * @param socketAdress a String.
-	 * @param token a long.
-	 * @return DataPrivateConnectionAccepted.
-	 */
-	static DataPrivateConnectionAccepted createDataPrivateConnectionAccepted(StandardOperation opcode, String loginReceiver, String socketAdress, long token) {
-		Objects.requireNonNull(loginReceiver);
-		Objects.requireNonNull(socketAdress);
-		DataText dLogin = new DataText(loginReceiver);
-		DataText dSocket = new DataText(socketAdress);
-		return new DataPrivateConnectionAccepted(opcode, dLogin, dSocket, token);
-	}
-	
-	/**
-	 * Creates a DataPrivateConnectionRejected.
-	 * @param opcode a StandardOperation.
-	 * @param loginReceived a String.
-	 * @return DataPrivateConnectionRejected.
-	 */
-	static DataPrivateConnectionRejected createDataPrivateConnectionRejected(StandardOperation opcode, String loginReceived) {
-		Objects.requireNonNull(loginReceived);
-		DataText dataLogin = new DataText(loginReceived);
-		return new DataPrivateConnectionRejected(opcode, dataLogin);
-	}
-	
 	/**
 	 * Creates a DataConnectionClient.
 	 * @param opcode a StandardOperation
@@ -471,8 +545,74 @@ public interface Data {
 		return new DataConnectionServerMdp(typeConnexion, System.currentTimeMillis(), data.login, data.password);
 	}
 	
+	/**
+	 * Creates a DataConnectionServerMdpReponse.
+	 * @param opcode a byte.
+	 * @param id a long.
+	 * @return DataConnectionServerMdpReponse.
+	 */
 	static DataConnectionServerMdpReponse createDataConnectionServerMdpReponse(byte opcode, long id) {
 		return new DataConnectionServerMdpReponse(opcode, id);
 		
 	}
+
+	/**
+	 * Creates a DataPrivateConnectionRequested.
+	 * @param opcode a StandardOperation.
+	 * @param step a byte.
+	 * @param login a String
+	 * @return DataPrivateConnectionRequested.
+	 */
+	static DataPrivateConnectionRequested createDataPrivateConnectionRequested(StandardOperation opcode, byte step, String login) {
+		Objects.requireNonNull(login);
+		DataText loginRequest = new DataText(login);
+		return new DataPrivateConnectionRequested(opcode, step, loginRequest);
+	}
+
+	/**
+	 * Creates a DataPrivateConnectionAccepted.
+	 * @param opcode a StandardOperation.
+	 * @param step a byte.
+	 * @param login a String.
+	 * @param socketAdress a String
+	 * @param token a long
+	 * @return DataPrivateConnectionAccepted.
+	 */
+	static DataPrivateConnectionAccepted createDataPrivateConnectionAccepted(StandardOperation opcode, byte step, String login, int port, String socketAdress, long token) {
+		Objects.requireNonNull(login);
+		Objects.requireNonNull(socketAdress);
+		DataText loginData = new DataText(login);
+		DataText socketData = new DataText(socketAdress);
+		return new DataPrivateConnectionAccepted(opcode, step, loginData, port, socketData, token);
+	}
+
+	/**
+	 * Creates a DataPrivateConnectionReponse.
+	 * @param opcode a StandardOperation.
+	 * @param step a Byte.
+	 * @param login a String.
+	 * @param state a Byte.
+	 * @return DataPrivateConnectionReponse
+	 */
+	static DataPrivateConnectionReponse createDataPrivateConnectionReponse(StandardOperation opcode, byte step, String login, byte state) {
+		Objects.requireNonNull(login);
+		DataPrivateConnectionRequested d = createDataPrivateConnectionRequested(opcode, step, login);
+		return new DataPrivateConnectionReponse(d, state);
+	}
+
+	/**
+	 * Creates a DataPrivateConnectionConnect.
+	 * @param opcode a StandardOperation.
+	 * @param step a byte.
+	 * @param login a String.
+	 * @param token a long.
+	 * @return DataPrivateConnectionConnect.
+	 */
+	static DataPrivateConnectionConnect createDataPrivateConnectionConnect(StandardOperation opcode, byte step, String login, long token) {
+		Objects.requireNonNull(login);
+		DataText loginData = new DataText(login);
+		return new DataPrivateConnectionConnect(opcode, step, loginData, token);
+	}
+
+	
 }

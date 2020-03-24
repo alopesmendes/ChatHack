@@ -17,10 +17,8 @@ class FramePrivateConnectionRejected implements Frame {
 
 	@Override
 	public ByteBuffer buffer() {
-		ByteBuffer encodeLogin = new FrameText(data.loginReceiver).buffer();
-		ByteBuffer bb = ByteBuffer.allocate(Byte.BYTES+encodeLogin.remaining());
-		bb.put(data.opcode.opcode());
-		bb.put(encodeLogin);
+		ByteBuffer bb = ByteBuffer.allocate(3 * Byte.BYTES);
+		bb.put(data.opcode.opcode()).put(data.requestCode).put(data.step);
 		bb.flip();
 		return bb;
 	}

@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.frame.Frame;
 import fr.upem.net.tcp.frame.FrameVisitor;
+import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.SelectReaderOpcode;
 
@@ -44,29 +45,74 @@ public class ServerChatHack {
 		private Context(ServerChatHack server, SelectionKey key) {
 			this.key = key;
 			this.sc = (SocketChannel) key.channel();
-			//this.server = server;
 			reader = SelectReaderOpcode.create(bbin);
 			fv = new FrameVisitor().when(Data.DataGlobalClient.class, d -> {
 				Frame frame = Frame.createFrameGlobal(d.transformTo(login));
 				server.broadcast(frame);
 				return frame;}).
+					
 			when(Data.DataConnectionClient.class, d -> {
 				login = d.login();
+				server.loginMap.put(login, this);
 				Data.DataConnectionServerMdp data = Data.createDataConnectionServerMdp(d);
 				Frame frame = Frame.createFrameConnectionMdp(data);
 				Context context = (Context) server.uniqueKey.attachment();
 				context.queueMessage(frame);
 				server.requestMap.put(data.getId(), this);
 				return frame;}).
+			
 			when(Data.DataConnectionServerMdpReponse.class, d -> {
 				Frame frame = Frame.createFrameConnectMdpServer(d);
 				Context context = server.requestMap.computeIfAbsent(d.getId(), id -> {throw new AssertionError();});
 				context.queueMessage(frame);
 				return frame;}).
+			
 			when(Data.DataError.class, d -> {
 				Frame frame = Frame.createFrameError(d);
 				queueMessage(frame);
-				return frame;});
+				return frame;}).
+			
+			when(Data.DataPrivateConnectionRequested.class, d -> {
+				Context context = server.loginMap.get(d.login());
+				if (context == null) {
+					Frame error = errorFrame((byte)2);
+					queueMessage(error);
+					return error;
+				}
+				var data = Data.createDataPrivateConnectionRequested(StandardOperation.PRIVATE_CONNEXION, (byte)2, login);
+				Frame frame = Frame.createFramePrivateConnectionRequested(data);
+				context.queueMessage(frame);
+				return frame;}).
+			
+			when(Data.DataPrivateConnectionReponse.class, d -> {
+				Context context = server.loginMap.get(d.login());
+				if (context == null) {
+					Frame error = errorFrame((byte)2);
+					queueMessage(error);
+					return error;
+				}
+				var data = Data.createDataPrivateConnectionReponse(StandardOperation.PRIVATE_CONNEXION, (byte)4, login, d.state());
+				Frame frame = Frame.createFramePrivateConnectionReponse(data);
+				context.queueMessage(frame);
+				return frame;}).
+			
+			when(Data.DataPrivateConnectionAccepted.class, d -> {
+				Context context = server.loginMap.get(d.login());
+				if (context == null) {
+					Frame error = errorFrame((byte)2);
+					queueMessage(error);
+					return error;
+				}
+				var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)6, login, d.port(), d.host(), d.token());
+				Frame frame = Frame.createFramePrivateConnectionAccepted(data);
+				context.queueMessage(frame);
+				return frame;
+			});
+		}
+		
+		private Frame errorFrame(byte requestCode) {
+			var data = Data.createDataError(StandardOperation.ERROR, requestCode);
+			return Frame.createFrameError(data);
 		}
 
 		/**
@@ -203,6 +249,7 @@ public class ServerChatHack {
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
 	private final Map<Long, Context> requestMap = new HashMap<>();
+	private final Map<String, Context> loginMap = new HashMap<>();
 	private final SocketChannel scPassword;
 	
 	

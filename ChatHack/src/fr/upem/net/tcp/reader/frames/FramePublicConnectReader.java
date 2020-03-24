@@ -39,20 +39,7 @@ public class FramePublicConnectReader implements Reader<Data> {
 		if (state==State.DONE || state==State.ERROR) {
 			throw new IllegalStateException();
 		}
-		switch (state) {
-/*
-		case WAITING_OP_CODE:
-			ProcessStatus opStatus = byteReader.process();
-			if (opStatus != ProcessStatus.DONE) {
-				return opStatus;
-			}
-			op_code = byteReader.get();
-			if (op_code != StandardOperation.CONNEXION.opcode()) {
-				return ProcessStatus.ERROR;
-			}
-			byteReader.reset();
-			state = State.WAITING_CONNEXION_TYPE;
-*/			
+		switch (state) {	
 		case WAITING_CONNEXION_TYPE:
 			ProcessStatus typeStatus = byteReader.process();
 			if (typeStatus != ProcessStatus.DONE) {
@@ -80,7 +67,6 @@ public class FramePublicConnectReader implements Reader<Data> {
 			state = State.WAITING_PASSWORD;
 		case WAITING_PASSWORD:
 			ProcessStatus passwordStatus = stringReader.process();
-			System.out.println("---------- ICI ----------");
 			if (passwordStatus != ProcessStatus.DONE) {
 				return passwordStatus;
 			}
@@ -88,7 +74,6 @@ public class FramePublicConnectReader implements Reader<Data> {
 			stringReader.reset();
 			state = State.DONE;
 			data = Data.createDataConnectionClient(StandardOperation.CONNEXION, connexionType, login, Optional.of(password));
-			System.out.println("---------- OK ----------");
 			return ProcessStatus.DONE;
 		default:
 			throw new AssertionError();
