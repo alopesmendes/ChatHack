@@ -1,34 +1,34 @@
-package fr.upem.net.tcp.reader.frames;
+package fr.upem.net.tcp.reader.data;
 
 import java.nio.ByteBuffer;
 
 import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
-import fr.upem.net.tcp.reader.basics.ByteReader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
-public class FramePrivateConnectionReponseReader implements Reader<Data> {
+public class DataPrivateConnectionRequestReader implements Reader<Data> {
+	
 	private enum State {
-		DONE, WAITING_LOGIN, WAITING_STATE, ERROR;
+		DONE, WAITING_LOGIN, ERROR;
 	}
 	
 	private State state = State.WAITING_LOGIN;
 	private final byte step;
-	private byte status;
-	private ByteReader byteReader;
-	private StringReader loginReader;
 	private String login;
+	private final StringReader loginReader;
 	private Data data;
 	
-	public FramePrivateConnectionReponseReader(byte step, ByteBuffer bb) {
-		this.step = step;
-		byteReader = new ByteReader(bb);
+	public DataPrivateConnectionRequestReader(byte step, ByteBuffer bb) {
 		loginReader = new StringReader(bb);
+		this.step = step;
 	}
 	
 	@Override
 	public ProcessStatus process() {
+		if (state == State.DONE || state == State.ERROR) {
+			throw new IllegalArgumentException();
+		}
 		switch (state) {
 			case WAITING_LOGIN:
 				ProcessStatus processLogin = loginReader.process();
@@ -37,20 +37,13 @@ public class FramePrivateConnectionReponseReader implements Reader<Data> {
 				}
 				login = loginReader.get();
 				loginReader.reset();
-				state = State.WAITING_STATE;
-			case WAITING_STATE:
-				ProcessStatus processStatus = byteReader.process();
-				if (processStatus != ProcessStatus.DONE) {
-					return processStatus;
-				}
-				status = byteReader.get();
-				byteReader.reset();
-				data = Data.createDataPrivateConnectionReponse(StandardOperation.PRIVATE_CONNEXION, step, login, status);
 				state = State.DONE;
+				data = Data.createDataPrivateConnectionRequested(StandardOperation.PRIVATE_CONNEXION, step, login);
 				return ProcessStatus.DONE;
+	
 			default:
 				throw new IllegalArgumentException("Unexpected value: " + state);
-			}
+		}
 	}
 
 	@Override
@@ -64,7 +57,6 @@ public class FramePrivateConnectionReponseReader implements Reader<Data> {
 	@Override
 	public void reset() {
 		state = State.WAITING_LOGIN;
-		byteReader.reset();
 		loginReader.reset();
 		
 	}

@@ -1,4 +1,4 @@
-package fr.upem.net.tcp.reader.frames;
+package fr.upem.net.tcp.reader.data;
 
 import java.nio.ByteBuffer;
 
@@ -10,7 +10,7 @@ import fr.upem.net.tcp.reader.basics.ByteReader;
 
 
 
-public class FrameErrorReader implements Reader<Data> {
+public class DataErrorReader implements Reader<Data> {
 
 	private enum State {
 		DONE,WAITING_OP_REQUEST, ERROR
@@ -24,7 +24,7 @@ public class FrameErrorReader implements Reader<Data> {
 	/**
 	 * @param bb
 	 */
-	public FrameErrorReader(ByteBuffer bb) {
+	public DataErrorReader(ByteBuffer bb) {
 		this.byteReader = new ByteReader(bb);
 	}
 	

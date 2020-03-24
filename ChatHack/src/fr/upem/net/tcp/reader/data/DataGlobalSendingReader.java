@@ -1,4 +1,4 @@
-package fr.upem.net.tcp.reader.frames;
+package fr.upem.net.tcp.reader.data;
 
 import java.nio.ByteBuffer;
 
@@ -9,7 +9,7 @@ import fr.upem.net.tcp.reader.basics.ByteReader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
 
-public class FrameGlobalSendingReader implements Reader<Data> {
+public class DataGlobalSendingReader implements Reader<Data> {
 
 	private enum State {
 		DONE, WAITING_TEXT, ERROR
@@ -25,7 +25,7 @@ public class FrameGlobalSendingReader implements Reader<Data> {
 	/**
 	 * @param bb
 	 */
-	public FrameGlobalSendingReader(ByteBuffer bb, byte step) {
+	public DataGlobalSendingReader(ByteBuffer bb, byte step) {
 		this.stringReader = new StringReader(bb);
 		this.byteReader = new ByteReader(bb);
 		this.step = step;

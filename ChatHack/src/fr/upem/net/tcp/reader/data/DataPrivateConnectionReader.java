@@ -1,4 +1,4 @@
-package fr.upem.net.tcp.reader.frames;
+package fr.upem.net.tcp.reader.data;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -8,7 +8,7 @@ import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 
-public class FramePrivateConnectionReader implements Reader<Data> {
+public class DataPrivateConnectionReader implements Reader<Data> {
 	
 	private enum State {
 		DONE, WAITING_STEP, WAITING_READER, ERROR;
@@ -21,20 +21,20 @@ public class FramePrivateConnectionReader implements Reader<Data> {
 	private Reader<Data> reader;
 	private Data data;
 	
-	private FramePrivateConnectionReader(ByteBuffer bb, Map<Byte, Reader<Data>> map) {
+	private DataPrivateConnectionReader(ByteBuffer bb, Map<Byte, Reader<Data>> map) {
 		byteReader = new ByteReader(bb);
 		this.map = map;
 	}
 	
-	public static FramePrivateConnectionReader create(ByteBuffer bb) {
+	public static DataPrivateConnectionReader create(ByteBuffer bb) {
 		HashMap<Byte, Reader<Data>> map = new HashMap<>();
-		map.put((byte)1, new FramePrivateConnectionRequestReader((byte)1, bb));
-		map.put((byte)2, new FramePrivateConnectionRequestReader((byte)2, bb));
-		map.put((byte)3, new FramePrivateConnectionReponseReader((byte)3, bb));
-		map.put((byte)4, new FramePrivateConnectionReponseReader((byte)4, bb));
-		map.put((byte)5, new FramePrivateConnectionAcceptedReader((byte)5, bb));
-		map.put((byte)6, new FramePrivateConnectionAcceptedReader((byte)6, bb));
-		return new FramePrivateConnectionReader(bb, map);
+		map.put((byte)1, new DataPrivateConnectionRequestReader((byte)1, bb));
+		map.put((byte)2, new DataPrivateConnectionRequestReader((byte)2, bb));
+		map.put((byte)3, new DataPrivateConnectionReponseReader((byte)3, bb));
+		map.put((byte)4, new DataPrivateConnectionReponseReader((byte)4, bb));
+		map.put((byte)5, new DataPrivateConnectionAcceptedReader((byte)5, bb));
+		map.put((byte)6, new DataPrivateConnectionAcceptedReader((byte)6, bb));
+		return new DataPrivateConnectionReader(bb, map);
 	}
 	
 	

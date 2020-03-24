@@ -1,4 +1,4 @@
-package fr.upem.net.tcp.reader.frames;
+package fr.upem.net.tcp.reader.data;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -7,7 +7,7 @@ import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 
-public class FrameGlobal implements Reader<Data> {
+public class DataGlobal implements Reader<Data> {
 	
 	private enum State {
 		DONE, WAITING_BYTE, WAITING_READER, ERROR;
@@ -19,18 +19,18 @@ public class FrameGlobal implements Reader<Data> {
 	private Reader<Data> reader;
 	private Data data;
 	
-	private FrameGlobal(ByteReader byteReader, HashMap<Byte, Reader<Data>> map) {
+	private DataGlobal(ByteReader byteReader, HashMap<Byte, Reader<Data>> map) {
 		this.map = map;
 		this.byteReader = byteReader;
 	}
 	
-	public static FrameGlobal create(ByteBuffer bb) {
+	public static DataGlobal create(ByteBuffer bb) {
 		HashMap<Byte, Reader<Data>> map = new HashMap<>();
-		map.put((byte)1, new FrameGlobalSendingReader(bb, (byte)1));
-		map.put((byte)2, new FrameGlobalReceivingReader(bb, (byte)2));
+		map.put((byte)1, new DataGlobalSendingReader(bb, (byte)1));
+		map.put((byte)2, new DataGlobalReceivingReader(bb, (byte)2));
 		//map.put((byte) 1, new FrameGlobalReceivingReader(bb));
 		//map.put((byte)2, new FrameGlobalSendingReader(bb, "Ailton"));
-		return new FrameGlobal(new ByteReader(bb), map);
+		return new DataGlobal(new ByteReader(bb), map);
 	}
 	
 	@Override

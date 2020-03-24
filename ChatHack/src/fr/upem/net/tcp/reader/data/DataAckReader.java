@@ -1,4 +1,4 @@
-package fr.upem.net.tcp.reader.frames;
+package fr.upem.net.tcp.reader.data;
 
 import java.nio.ByteBuffer;
 
@@ -7,7 +7,7 @@ import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.LongReader;
 
 
-public class FrameAckReader implements Reader<Data> {
+public class DataAckReader implements Reader<Data> {
 	
 	private enum State {
 		DONE,WAITING_ID, ERROR
@@ -23,7 +23,7 @@ public class FrameAckReader implements Reader<Data> {
 	/**
 	 * @param bb
 	 */
-	public FrameAckReader(ByteBuffer bb, byte op_code) {
+	public DataAckReader(ByteBuffer bb, byte op_code) {
 		this.longReader = new LongReader(bb);
 		this.op_code = op_code;
 	}

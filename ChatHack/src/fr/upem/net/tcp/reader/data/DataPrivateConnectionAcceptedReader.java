@@ -1,4 +1,4 @@
-package fr.upem.net.tcp.reader.frames;
+package fr.upem.net.tcp.reader.data;
 
 import java.nio.ByteBuffer;
 
@@ -9,7 +9,7 @@ import fr.upem.net.tcp.reader.basics.IntReader;
 import fr.upem.net.tcp.reader.basics.LongReader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
-public class FramePrivateConnectionAcceptedReader implements Reader<Data> {
+public class DataPrivateConnectionAcceptedReader implements Reader<Data> {
 	
 	private enum State {
 		DONE, WAITING_LOGIN, WAITING_PORT, WAITING_HOST, WAITING_TOKEN, ERROR;
@@ -25,7 +25,7 @@ public class FramePrivateConnectionAcceptedReader implements Reader<Data> {
 	private String host;
 	private Data data;
 	
-	public FramePrivateConnectionAcceptedReader(byte step, ByteBuffer bb) {
+	public DataPrivateConnectionAcceptedReader(byte step, ByteBuffer bb) {
 		this.step = step;
 		stringReader = new StringReader(bb);
 		intReader = new IntReader(bb);
