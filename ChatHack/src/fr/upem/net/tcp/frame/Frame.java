@@ -24,37 +24,37 @@ public interface Frame {
 	
 	/**
 	 * Creates a Global Frame.
-	 * @param dataGlobal a DataGlobal.
+	 * @param data a DataGlobal.
 	 * @return FrameGlobal.
 	 */
-	static Frame createFrameGlobal(DataGlobalServer dataGlobal) {
-		Objects.requireNonNull(dataGlobal);
-		return new FrameGlobalServer(dataGlobal);
+	static Frame createFrameGlobal(DataGlobalServer data) {
+		Objects.requireNonNull(data);
+		return new FrameGlobalServer(data);
 	}
 	
-	static Frame createFrameGlobal(DataGlobalClient dataGlobal) {
-		Objects.requireNonNull(dataGlobal);
-		return new FrameGlobalClient(dataGlobal);
+	static Frame createFrameGlobal(DataGlobalClient data) {
+		Objects.requireNonNull(data);
+		return new FrameGlobalClient(data);
 	}
 	
 	/**
 	 * Creates a Error Frame.
-	 * @param dataError a DataError.
+	 * @param data a DataError.
 	 * @return FrameError.
 	 */
-	static Frame createFrameError(DataError dataError) {
-		Objects.requireNonNull(dataError);
-		return new FrameError(dataError);
+	static Frame createFrameError(DataError data) {
+		Objects.requireNonNull(data);
+		return new FrameError(data);
 	}
 	
 	/**
 	 * Creates a Connection Frame.
-	 * @param dataConnection a DataConnection.
+	 * @param data a DataConnection.
 	 * @return FrameConnection.
 	 */
-	static Frame createFrameConnection(DataConnectionClient dataConnection) {
-		Objects.requireNonNull(dataConnection);
-		return new FrameConnectionClient(dataConnection);
+	static Frame createFrameConnection(DataConnectionClient data) {
+		Objects.requireNonNull(data);
+		return new FrameConnectionClient(data);
 	}
 	
 	/**
