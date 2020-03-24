@@ -313,9 +313,8 @@ public class ServerChatHack {
 	}
 	
 	private void doAccept(SelectionKey key) throws IOException {
-		// TODO
+	
 		SocketChannel sc = serverSocketChannel.accept();
-
 		if (sc != null) {
 			sc.configureBlocking(false);
 			SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
