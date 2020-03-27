@@ -34,6 +34,7 @@ public class FramePrivateConnectionReader implements Reader<Data> {
 		map.put((byte)4, new FramePrivateConnectionReponseReader((byte)4, bb));
 		map.put((byte)5, new FramePrivateConnectionAcceptedReader((byte)5, bb));
 		map.put((byte)6, new FramePrivateConnectionAcceptedReader((byte)6, bb));
+		map.put((byte)7, new FramePrivateConnectionConnectReader((byte)7, bb));
 		return new FramePrivateConnectionReader(bb, map);
 	}
 	

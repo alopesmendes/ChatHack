@@ -10,8 +10,10 @@ import fr.upem.net.tcp.frame.Data.DataError;
 import fr.upem.net.tcp.frame.Data.DataGlobalClient;
 import fr.upem.net.tcp.frame.Data.DataGlobalServer;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionAccepted;
+import fr.upem.net.tcp.frame.Data.DataPrivateConnectionConnect;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionReponse;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionRequested;
+import fr.upem.net.tcp.frame.Data.DataPrivateMessage;
 
 public interface Frame {
 	
@@ -105,5 +107,25 @@ public interface Frame {
 	static Frame createFramePrivateConnectionAccepted(DataPrivateConnectionAccepted data) {
 		Objects.requireNonNull(data);
 		return new FramePrivateConnectionAccepted(data);
+	}
+	
+	/**
+	 * Creates a FramePrivateMessage.
+	 * @param data a {@link DataPrivateMessage}.
+	 * @return FramePrivateMessage.
+	 */
+	static Frame createFramePrivateMessage(DataPrivateMessage data) {
+		Objects.requireNonNull(data);
+		return new FramePrivateMessage(data);
+	}
+	
+	/**
+	 * Creates a FramePrivateConnectionConnect.
+	 * @param data a {@link DataPrivateConnectionConnect}.
+	 * @return DataPrivateConnectionConnect.
+	 */
+	static Frame createFramePrivateConnectionConnect(DataPrivateConnectionConnect data) {
+		Objects.requireNonNull(data);
+		return new FramePrivateConnectionConnect(data);
 	}
 }

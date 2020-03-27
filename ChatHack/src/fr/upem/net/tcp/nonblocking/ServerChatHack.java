@@ -46,7 +46,9 @@ public class ServerChatHack {
 			this.key = key;
 			this.sc = (SocketChannel) key.channel();
 			reader = SelectReaderOpcode.create(bbin);
-			fv = new FrameVisitor().when(Data.DataGlobalClient.class, d -> {
+			fv = new FrameVisitor().
+			
+			when(Data.DataGlobalClient.class, d -> {
 				Frame frame = Frame.createFrameGlobal(d.transformTo(login));
 				server.broadcast(frame);
 				return frame;}).
@@ -106,8 +108,20 @@ public class ServerChatHack {
 				var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)6, login, d.port(), d.host(), d.token());
 				Frame frame = Frame.createFramePrivateConnectionAccepted(data);
 				context.queueMessage(frame);
+				return frame;})/*.
+			
+			when(Data.DataPrivateConnectionConnect.class, d -> {
+				Context context = server.loginMap.get(d.login());
+				if (context == null) {
+					Frame error = errorFrame((byte)2);
+					queueMessage(error);
+					return error;
+				}
+				Data.DataPrivateConnectionConnect data = Data.createDataPrivateConnectionConnect(StandardOperation.PRIVATE_CONNEXION, (byte)7, d.login(), d.token());
+				Frame frame = Frame.createFramePrivateConnectionConnect(data);
+				queueMessage(frame);
 				return frame;
-			});
+			})*/;
 		}
 		
 		private Frame errorFrame(byte requestCode) {
@@ -161,7 +175,6 @@ public class ServerChatHack {
 		 *
 		 */
 		private void processOut() {
-			// TODO
 			while (!queue.isEmpty() && bbout.remaining() >= queue.peek().remaining()) {
 				bbout.put(queue.poll());
 			}
@@ -175,11 +188,8 @@ public class ServerChatHack {
 		 * updateInterestOps and after the call. Also it is assumed that process has
 		 * been be called just before updateInterestOps.
 		 */
-
 		private void updateInterestOps() {
-			// TODO
 			int ops = 0;
-
 			if (bbin.hasRemaining() && !closed) {
 				ops |= SelectionKey.OP_READ;
 			}
@@ -190,7 +200,6 @@ public class ServerChatHack {
 				silentlyClose();
 			} else {
 				key.interestOps(ops);
-
 			}
 		}
 
@@ -251,6 +260,7 @@ public class ServerChatHack {
 	private final Map<Long, Context> requestMap = new HashMap<>();
 	private final Map<String, Context> loginMap = new HashMap<>();
 	private final SocketChannel scPassword;
+	
 	
 	
 	public ServerChatHack(int port) throws IOException {

@@ -20,7 +20,7 @@ class FramePrivateConnectionAccepted implements Frame {
 	public ByteBuffer buffer() {
 		ByteBuffer encodeLogin = new FrameText(data.loginReceiver).buffer();
 		ByteBuffer encodeSocket = new FrameText(data.host).buffer();
-		ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES + 2*Byte.BYTES + Long.BYTES +encodeLogin.remaining() + encodeSocket.remaining());
+		ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES + 2*Byte.BYTES + Long.BYTES + encodeLogin.remaining() + encodeSocket.remaining());
 		bb.put(data.opcode.opcode());
 		bb.put(data.step);
 		bb.put(encodeLogin);

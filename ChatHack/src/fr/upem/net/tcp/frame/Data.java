@@ -53,7 +53,6 @@ public interface Data {
 		
 		@Override
 		public int hashCode() {
-			
 			return Byte.hashCode(opcode.opcode()) ^ Byte.hashCode(step) ^ pseudo.hashCode() ^ message.hashCode();
 		}
 		
@@ -65,6 +64,14 @@ public interface Data {
 			DataGlobalServer d = (DataGlobalServer)obj;
 			return 	opcode==d.opcode && step==d.step 
 					&& pseudo.equals(d.pseudo) && message.equals(d.message);
+		}
+		
+		public String login() {
+			return pseudo.text;
+		}
+		
+		public String message() {
+			return message.text;
 		}
 	}
 	
@@ -308,6 +315,14 @@ public interface Data {
 			return d.opcode==opcode && d.step==step && token==d.token && login.equals(d.login);
 		}
 		
+		public String login() {
+			return login.text;
+		}
+		
+		public long token() {
+			return token;
+		}
+		
 		
 	}
 	
@@ -463,10 +478,51 @@ public interface Data {
 		}
 		
 	}
+
+	static class DataPrivateMessage implements Data {
+		final StandardOperation opcode;
+		final DataText login;
+		final DataText message;
+		
+		/**
+		 * Constructs a DataPrivateMessage with it's opcode and message.
+		 * @param login a DataText.
+		 * @param opcode a StandardOperation.
+		 * @param message a DataText.
+		 */
+		private DataPrivateMessage(StandardOperation opcode, DataText login, DataText message) {
+			this.opcode = opcode;
+			this.login = login;
+			this.message = message;
+		}
+		
+		@Override
+		public int hashCode() {
+			return Byte.hashCode(opcode.opcode()) ^ message.hashCode() ^ login.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataPrivateMessage)) {
+				return false;
+			}
+			DataPrivateMessage d = (DataPrivateMessage)obj;
+			return opcode==d.opcode && message.equals(d.message) && login.equals(d.login);
+		}
+		
+		public String message() {
+			return message.text;
+		}
+		
+		public String login() {
+			return login.text;
+		}
+		
+	}
 	
 	/**
 	 * Creates a DataText.
-	 * @param text a string
+	 * @param text a {@link String}.
 	 * @return DataText.
 	 */
 	static DataText createDataText(String text) {
@@ -476,10 +532,10 @@ public interface Data {
 	
 	/**
 	 * Creates a DataGlobal.
-	 * @param ack a byte
-	 * @param step a byte
-	 * @param pseudo a string
-	 * @param message a string
+	 * @param ack a {@link Byte}.
+	 * @param step a {@link Byte}.
+	 * @param pseudo a {@link String}.
+	 * @param message a {@link String}.
 	 * @return DataGlobalServer.
 	 */
 	static DataGlobalServer createDataGlobalServer(StandardOperation opcode, byte step, String pseudo, String message) {
@@ -492,9 +548,9 @@ public interface Data {
 	
 	/**
 	 * Creates a DataGlobalClient.
-	 * @param opcode a StandardOperation
-	 * @param step a byte
-	 * @param message a string
+	 * @param opcode a {@link StandardOperation}.
+	 * @param step a {@link Byte}.
+	 * @param message a {@link String}.
 	 * @return DataGlobalClient.
 	 */
 	static DataGlobalClient createDataGlobalClient(StandardOperation opcode, byte step, String message) {
@@ -505,8 +561,8 @@ public interface Data {
 	
 	/**
 	 * Creates a DataError.
-	 * @param opcode
-	 * @param requestCode
+	 * @param opcode a {@link StandardOperation}.
+	 * @param requestCode a {@link Byte}.
 	 * @return DataError.
 	 */
 	static DataError createDataError(StandardOperation opcode, byte requestCode) {
@@ -515,10 +571,10 @@ public interface Data {
 	
 	/**
 	 * Creates a DataConnectionClient.
-	 * @param opcode a StandardOperation
-	 * @param connexion a byte.
-	 * @param login a String
-	 * @param password a Optional<String>
+	 * @param opcode a {@link StandardOperation}.
+	 * @param connexion a {@link Byte}.
+	 * @param login a {@link String}.
+	 * @param password a {@link Optional}.
 	 * @return DataConnectionClient.
 	 */
 	static DataConnectionClient createDataConnectionClient(StandardOperation opcode, byte connexion, String login, Optional<String> password) {
@@ -531,7 +587,7 @@ public interface Data {
 	
 	/**
 	 * Creates a DataConnectionServerMDP.
-	 * @param data a DataConnectionClient.
+	 * @param data a {@link DataConnectionClient}.
 	 * @return DataConnectionServerMdp.
 	 */
 	static DataConnectionServerMdp createDataConnectionServerMdp(DataConnectionClient data) {
@@ -547,8 +603,8 @@ public interface Data {
 	
 	/**
 	 * Creates a DataConnectionServerMdpReponse.
-	 * @param opcode a byte.
-	 * @param id a long.
+	 * @param opcode a {@link Byte}.
+	 * @param id a {@link Long}.
 	 * @return DataConnectionServerMdpReponse.
 	 */
 	static DataConnectionServerMdpReponse createDataConnectionServerMdpReponse(byte opcode, long id) {
@@ -558,9 +614,9 @@ public interface Data {
 
 	/**
 	 * Creates a DataPrivateConnectionRequested.
-	 * @param opcode a StandardOperation.
-	 * @param step a byte.
-	 * @param login a String
+	 * @param opcode a {@link StandardOperation}.
+	 * @param step a {@link Byte}.
+	 * @param login a {@link String}.
 	 * @return DataPrivateConnectionRequested.
 	 */
 	static DataPrivateConnectionRequested createDataPrivateConnectionRequested(StandardOperation opcode, byte step, String login) {
@@ -571,11 +627,11 @@ public interface Data {
 
 	/**
 	 * Creates a DataPrivateConnectionAccepted.
-	 * @param opcode a StandardOperation.
-	 * @param step a byte.
-	 * @param login a String.
-	 * @param socketAdress a String
-	 * @param token a long
+	 * @param opcode a {@link StandardOperation}.
+	 * @param step a {@link Byte}.
+	 * @param login a {@link String}.
+	 * @param socketAdress a {@link String}.
+	 * @param token a {@link Long}.
 	 * @return DataPrivateConnectionAccepted.
 	 */
 	static DataPrivateConnectionAccepted createDataPrivateConnectionAccepted(StandardOperation opcode, byte step, String login, int port, String socketAdress, long token) {
@@ -588,10 +644,10 @@ public interface Data {
 
 	/**
 	 * Creates a DataPrivateConnectionReponse.
-	 * @param opcode a StandardOperation.
-	 * @param step a Byte.
-	 * @param login a String.
-	 * @param state a Byte.
+	 * @param opcode a {@link StandardOperation}.
+	 * @param step a {@link Byte}.
+	 * @param login a {@link String}.
+	 * @param state a {@link Byte}.
 	 * @return DataPrivateConnectionReponse
 	 */
 	static DataPrivateConnectionReponse createDataPrivateConnectionReponse(StandardOperation opcode, byte step, String login, byte state) {
@@ -602,10 +658,10 @@ public interface Data {
 
 	/**
 	 * Creates a DataPrivateConnectionConnect.
-	 * @param opcode a StandardOperation.
-	 * @param step a byte.
-	 * @param login a String.
-	 * @param token a long.
+	 * @param opcode a {@link StandardOperation}.
+	 * @param step a {@link Byte}.
+	 * @param login a {@link String}.
+	 * @param token a {@link Long}.
 	 * @return DataPrivateConnectionConnect.
 	 */
 	static DataPrivateConnectionConnect createDataPrivateConnectionConnect(StandardOperation opcode, byte step, String login, long token) {
@@ -614,5 +670,17 @@ public interface Data {
 		return new DataPrivateConnectionConnect(opcode, step, loginData, token);
 	}
 
-	
+	/**
+	 * Creates a DataPrivateConnectionClient.
+	 * @param opcode a {@link StandardOperation}
+	 * @param message a {@link String}
+	 * @return
+	 */
+	static DataPrivateMessage createDataPrivateMessage(StandardOperation opcode,String login, String message) {
+		Objects.requireNonNull(message);
+		Objects.requireNonNull(login);
+		DataText messageData = new DataText(message);
+		DataText loginData = new DataText(login);
+		return new DataPrivateMessage(opcode, loginData, messageData);
+	}
 }
