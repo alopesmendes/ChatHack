@@ -5,30 +5,30 @@ import java.nio.ByteBuffer;
 import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
+import fr.upem.net.tcp.reader.basics.FileReader;
 import fr.upem.net.tcp.reader.basics.IntReader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
 public class FramePrivateFileReader implements Reader<Data> {
 
 	private enum State {
-		DONE, WAITING_LOGIN, WAITING_FILE_NAME, WAITING_FILE_SIZE, WAITING_FILE, ERROR;
+		DONE, WAITING_LOGIN, WAITING_FILE_NAME, WAITING_FILE, ERROR;
 	}
 
 	private State state = State.WAITING_LOGIN;
 	private final StringReader stringReader;
 	private final IntReader intReader;
-	private final ByteBuffer bb;
+	private final FileReader fileReader;
 
 	private String fileName;
 	private String login;
-	private int size;
 	private ByteBuffer fileBuffer;
 	private Data data;
 
 	public FramePrivateFileReader(ByteBuffer bb) {
-		this.bb = bb;
 		stringReader = new StringReader(bb);
 		intReader = new IntReader(bb);
+		fileReader = new FileReader(bb);
 	}
 
 
@@ -37,6 +37,7 @@ public class FramePrivateFileReader implements Reader<Data> {
 		if (state == State.DONE || state == State.ERROR) {
 			throw new IllegalArgumentException();
 		}
+		
 		switch (state) {
 			case WAITING_LOGIN:
 				ProcessStatus processLogin = stringReader.process();
@@ -53,27 +54,16 @@ public class FramePrivateFileReader implements Reader<Data> {
 				}
 				fileName = stringReader.get();
 				stringReader.reset();
-				state = State.WAITING_FILE_SIZE;
-			case WAITING_FILE_SIZE:
-				ProcessStatus processFileSize = intReader.process();
-				if (processFileSize != ProcessStatus.DONE) {
-					return processFileSize;
-				}
-				size = intReader.get();
-				intReader.reset();
 				state = State.WAITING_FILE;
-				fileBuffer = ByteBuffer.allocate(size);
 			case WAITING_FILE:
-				if (!bb.hasRemaining()) {
-					return ProcessStatus.ERROR;
+				ProcessStatus processFile = fileReader.process();
+				if (processFile != ProcessStatus.DONE) {
+					return processFile;
 				}
-				if (bb.remaining() < size) {
-					return ProcessStatus.REFILL;
-				}
-				bb.limit(bb.position()+size);
-				fileBuffer.put(bb).flip();
-				data = Data.createDataPrivateFile(StandardOperation.PRIVATE_FILE, login, fileName, fileBuffer);
+				fileBuffer = fileReader.get();
+				fileReader.reset();
 				state = State.DONE;
+				data = Data.createDataPrivateFile(StandardOperation.PRIVATE_FILE, login, fileName, fileBuffer);
 				return ProcessStatus.DONE;
 	
 			default:
@@ -94,6 +84,7 @@ public class FramePrivateFileReader implements Reader<Data> {
 		state = State.WAITING_LOGIN;
 		stringReader.reset();
 		intReader.reset();
+		fileReader.reset();
 
 	}
 

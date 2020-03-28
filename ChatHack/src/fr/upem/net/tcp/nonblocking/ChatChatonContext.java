@@ -173,7 +173,7 @@ public class ChatChatonContext {
 			
 			when(Data.DataPrivateFile.class, d -> {
 				Path path = Path.of(client.path.toString(), d.fileName());
-				try (FileChannel fc = FileChannel.open(path,  StandardOpenOption.CREATE
+				try (FileChannel fc = FileChannel.open(path , StandardOpenOption.CREATE
 															, StandardOpenOption.TRUNCATE_EXISTING
 															, StandardOpenOption.WRITE)) {
 					ByteBuffer bb = d.buffer();
