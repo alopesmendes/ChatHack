@@ -13,6 +13,7 @@ import fr.upem.net.tcp.frame.Data.DataPrivateConnectionAccepted;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionConnect;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionReponse;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionRequested;
+import fr.upem.net.tcp.frame.Data.DataPrivateFile;
 import fr.upem.net.tcp.frame.Data.DataPrivateMessage;
 
 public interface Frame {
@@ -122,10 +123,20 @@ public interface Frame {
 	/**
 	 * Creates a FramePrivateConnectionConnect.
 	 * @param data a {@link DataPrivateConnectionConnect}.
-	 * @return DataPrivateConnectionConnect.
+	 * @return FramePrivateConnectionConnect.
 	 */
 	static Frame createFramePrivateConnectionConnect(DataPrivateConnectionConnect data) {
 		Objects.requireNonNull(data);
 		return new FramePrivateConnectionConnect(data);
+	}
+	
+	/**
+	 * Creates a FramePrivateFile.
+	 * @param data a {@link DataPrivateFile}.
+	 * @return FramePrivateFile.
+	 */
+	static Frame createFramePrivateFile(DataPrivateFile data) {
+		Objects.requireNonNull(data);
+		return new FramePrivateFile(data);
 	}
 }

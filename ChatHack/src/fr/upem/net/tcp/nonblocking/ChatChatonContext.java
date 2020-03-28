@@ -6,11 +6,14 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
+import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -163,9 +166,27 @@ public class ChatChatonContext {
 			when(Data.DataPrivateConnectionConnect.class, d -> {
 				System.out.println("Client "+d.login()+" with the token "+d.token());
 				return null;}).
+			
 			when(Data.DataPrivateMessage.class, d -> {
-				System.out.println("private message from "+d.login()+":"+d.message());
-				return null;
+				System.out.println("private message from "+d.login()+" : "+d.message());
+				return null;}).
+			
+			when(Data.DataPrivateFile.class, d -> {
+				Path path = Path.of(client.path.toString(), d.fileName());
+				try (FileChannel fc = FileChannel.open(path,  StandardOpenOption.CREATE
+															, StandardOpenOption.TRUNCATE_EXISTING
+															, StandardOpenOption.WRITE)) {
+					ByteBuffer bb = d.buffer();
+					while (bb.hasRemaining()) {
+						if (fc.write(bb) == -1) {
+							break;
+						}
+					}
+				} catch (IOException e) {
+					
+				}
+				Frame frame = Frame.createFramePrivateFile(d);
+				return frame;
 			});
 		}
 	
@@ -313,8 +334,9 @@ public class ChatChatonContext {
 	private State state = State.NONE;
 	private Map<String, Context> map = new HashMap<>();
 	private final ServerSocketChannel serverSocketChannel;
+	private final Path path;
 
-	public ChatChatonContext(int clientPort, String hostname, int port, String login, Optional<String> password) throws IOException {
+	public ChatChatonContext(Path path, int clientPort, String hostname, int port, String login, Optional<String> password) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		selector = Selector.open();
 		sc = SocketChannel.open();
@@ -322,6 +344,7 @@ public class ChatChatonContext {
 		serverSocketChannel.bind(new InetSocketAddress(clientPort));
 		this.login = login;
 		this.password = password;
+		this.path = path;
 	}
 
 	private void sendPublicConnectionRequest() throws InterruptedException {
@@ -354,9 +377,9 @@ public class ChatChatonContext {
 		lock.lock();
 		try {
 			if (state == State.WATING_REPONSE) {
-				if (reponse.contentEquals("o")) {
+				if (reponse.equals("O") || reponse.equals("o")) {
 					state = State.YES;
-				} else if (reponse.contentEquals("n")) { 
+				} else if (reponse.equals("N") || reponse.equals("n")) { 
 					state = State.NO;
 				} else {
 					logger.info("ENTER O/N");
@@ -372,31 +395,54 @@ public class ChatChatonContext {
 		}
 	}
 	
-	private void send() throws InterruptedException {
+	private void sendingReponse(String log) {
+		state = State.SENDING_REPONSE;
+		Context context = (Context) uniqueKey.attachment();
+		Data data = Data.createDataPrivateConnectionRequested(StandardOperation.PRIVATE_CONNEXION, (byte)1, log);
+		context.fv.call(data);
+	}
+	
+	private Frame createFileFrame(String login, String fileName) throws IOException {
+		try (FileChannel fc = FileChannel.open(Path.of(path.toString(), fileName), StandardOpenOption.READ)) {
+			ByteBuffer bb = ByteBuffer.allocate((int)fc.size());
+			while (bb.hasRemaining()) {
+				if (fc.read(bb) == -1) {
+					break;
+				}
+			}
+			bb.flip();
+			var data = Data.createDataPrivateFile(StandardOperation.PRIVATE_FILE, login, fileName, bb);
+			return Frame.createFramePrivateFile(data);
+		}
+	}
+	
+	private void sendingMessageOrFile(String message, String login, String text) throws IOException {
+		state = State.NONE;
+		Context context = map.get(login);
+		Frame frame;
+		if (message.startsWith("@")) {
+			var data = Data.createDataPrivateMessage(StandardOperation.PRIVATE_MESSAGE, this.login, text);
+			frame = Frame.createFramePrivateMessage(data);
+		} else {
+			frame = createFileFrame(this.login, text);
+		}
+		context.queueMessage(frame.buffer());
+		selector.wakeup();
+	}
+	
+	private void send() throws InterruptedException, IOException {
 		while (!Thread.interrupted()) {
 			try (Scanner scanner = new Scanner(System.in)) {
 				while (scanner.hasNextLine()) {
 					String message = scanner.nextLine();
-					if (message.startsWith("@")) {
-						
+					if (message.startsWith("@") || message.startsWith("/") ) {
 						String[] s = message.split(" ", 2);
 						String l = s[0].substring(1);
 						if (!map.containsKey(l)) {
-							state = State.SENDING_REPONSE;
-							Context context = (Context) uniqueKey.attachment();
-							Data data = Data.createDataPrivateConnectionRequested(StandardOperation.PRIVATE_CONNEXION, (byte)1, s[0].substring(1));
-							context.fv.call(data);
+							sendingReponse(l);
 						} else {
-							state = State.NONE;
-							String text = s[1];
-							Context context = map.get(l);
-							var data = Data.createDataPrivateMessage(StandardOperation.PRIVATE_MESSAGE, login, text);
-							Frame frame = Frame.createFramePrivateMessage(data);
-							context.queueMessage(frame.buffer());
-							selector.wakeup();
+							sendingMessageOrFile(message, l, s[1]);
 						}
-					} else if (message.startsWith("/")) {
-						
 					} else {
 						waitReponse(message);
 					}
@@ -411,6 +457,8 @@ public class ChatChatonContext {
 				sendPublicConnectionRequest();
 				send();
 			} catch (InterruptedException e) {
+				return;
+			} catch (IOException e) {
 				return;
 			}
 		});
@@ -481,19 +529,21 @@ public class ChatChatonContext {
 	}
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
-		if (args.length != 4 && args.length != 5) {
+		if (args.length != 5 && args.length != 6) {
 			usage();
 			return;
 		}
-		int port = Integer.parseInt(args[0]);
-		String host = args[1];
-		int ip = Integer.parseInt(args[2]);
-		String login = args[3];
+		
+		Path path = Path.of(args[0]);
+		int port = Integer.parseInt(args[1]);
+		String host = args[2];
+		int ip = Integer.parseInt(args[3]);
+		String login = args[4];
 		Optional<String> password = Optional.empty();
-		if (args.length == 5) {
-			password = Optional.of(args[4]);
+		if (args.length == 6) {
+			password = Optional.of(args[5]);
 		}
-		new ChatChatonContext(port, host, ip, login, password).launch();
+		new ChatChatonContext(path, port, host, ip, login, password).launch();
 	}
 
 }

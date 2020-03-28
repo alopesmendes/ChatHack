@@ -1,5 +1,6 @@
 package fr.upem.net.tcp.frame;
 
+import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -520,6 +521,56 @@ public interface Data {
 		
 	}
 	
+	static class DataPrivateFile implements Data {
+		final StandardOperation opcode;
+		final DataText login;
+		final DataText fileName;
+		final ByteBuffer buff;
+		
+		/**
+		 * Constructs a DataPrivateFile with it's opcode, fileName, size and buff.
+		 * @param opcode a StandardOperation.
+		 * @param login a DataText.
+		 * @param fileName a DataText.
+		 * @param buff a ByteBuffer.
+		 */
+		private DataPrivateFile(StandardOperation opcode, DataText login, DataText fileName, ByteBuffer buff) {
+			this.opcode = opcode;
+			this.login = login;
+			this.fileName = fileName;
+			this.buff = buff;
+		}
+		
+		@Override
+		public int hashCode() {
+			return Byte.hashCode(opcode.opcode()) ^ fileName.hashCode() ^ login.hashCode() ^ buff.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataPrivateFile)) {
+				return false;
+			}
+			DataPrivateFile d = (DataPrivateFile)obj;
+			return 	d.opcode == opcode && d.login.equals(login)
+					&& d.fileName.equals(fileName) && d.buff.equals(buff);
+		}
+		
+		public String login() {
+			return login.text;
+		}
+		
+		public String fileName() {
+			return fileName.text;
+		}
+		
+		public ByteBuffer buffer() {
+			return buff;
+		}
+		
+		
+	}
+	
 	/**
 	 * Creates a DataText.
 	 * @param text a {@link String}.
@@ -682,5 +733,13 @@ public interface Data {
 		DataText messageData = new DataText(message);
 		DataText loginData = new DataText(login);
 		return new DataPrivateMessage(opcode, loginData, messageData);
+	}
+	
+	static DataPrivateFile createDataPrivateFile(StandardOperation opcode, String login, String fileName, ByteBuffer fileBuffer) {
+		Objects.requireNonNull(fileName);
+		Objects.requireNonNull(fileBuffer);
+		DataText loginData = new DataText(login);
+		DataText fileNameData = new DataText(fileName);
+		return new DataPrivateFile(opcode, loginData, fileNameData, fileBuffer);
 	}
 }
