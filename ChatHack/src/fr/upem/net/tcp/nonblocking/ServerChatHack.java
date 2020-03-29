@@ -263,11 +263,11 @@ public class ServerChatHack {
 	
 	
 	
-	public ServerChatHack(int port) throws IOException {
+	public ServerChatHack(int port, String host, int mdpPort) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
 		selector = Selector.open();
-		serverPasswordAdress = new InetSocketAddress("localhost", 4545);
+		serverPasswordAdress = new InetSocketAddress(host, mdpPort);
 		scPassword = SocketChannel.open();
 	}
 	
@@ -357,11 +357,11 @@ public class ServerChatHack {
 	}
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
-		if (args.length != 1) {
+		if (args.length != 3) {
 			usage();
 			return;
 		}
-		new ServerChatHack(Integer.parseInt(args[0])).launch();
+		new ServerChatHack(Integer.parseInt(args[0]), args[1], Integer.parseInt(args[2])).launch();
 	}
 
 	private static void usage() {
