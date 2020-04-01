@@ -7,7 +7,7 @@ import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.LongReader;
 
 
-public class FrameAckReader implements Reader<Data> {
+public class FrameMdpReader implements Reader<Data> {
 	
 	private enum State {
 		DONE,WAITING_ID, ERROR
@@ -23,7 +23,7 @@ public class FrameAckReader implements Reader<Data> {
 	/**
 	 * @param bb
 	 */
-	public FrameAckReader(ByteBuffer bb, byte op_code) {
+	public FrameMdpReader(ByteBuffer bb, byte op_code) {
 		this.longReader = new LongReader(bb);
 		this.op_code = op_code;
 	}

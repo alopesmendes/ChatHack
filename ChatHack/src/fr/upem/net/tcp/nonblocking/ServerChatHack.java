@@ -6,6 +6,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -21,6 +22,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.upem.net.tcp.frame.Data;
+import fr.upem.net.tcp.frame.Data.DataConnectionServerMdp;
 import fr.upem.net.tcp.frame.Frame;
 import fr.upem.net.tcp.frame.FrameVisitor;
 import fr.upem.net.tcp.frame.StandardOperation;
@@ -28,7 +30,22 @@ import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.SelectReaderOpcode;
 
 public class ServerChatHack {
-	
+
+	static private class DataMdp {
+		private final SelectionKey key;
+		private final Data.DataConnectionServerMdp data;
+		/**
+		 * @param key
+		 * @param data
+		 */
+		private DataMdp(SelectionKey key, DataConnectionServerMdp data) {
+			this.key = key;
+			this.data = data;
+		}
+
+
+	}
+
 	static private class Context {
 
 		final private SelectionKey key;
@@ -40,93 +57,79 @@ public class ServerChatHack {
 		final private Reader<Data> reader;
 		private boolean closed = false;
 		final private FrameVisitor fv;
-		private String login;
 
-		private Context(ServerChatHack server, SelectionKey key) {
+
+		private Context(ServerChatHack server, SelectionKey key, FrameVisitor fv) {
 			this.key = key;
 			this.sc = (SocketChannel) key.channel();
 			reader = SelectReaderOpcode.create(bbin);
-			fv = new FrameVisitor().
-			
-			when(Data.DataGlobalClient.class, d -> {
-				Frame frame = Frame.createFrameGlobal(d.transformTo(login));
-				server.broadcast(frame);
-				return frame;}).
-					
-			when(Data.DataConnectionClient.class, d -> {
-				login = d.login();
-				server.loginMap.put(login, this);
-				Data.DataConnectionServerMdp data = Data.createDataConnectionServerMdp(d);
-				Frame frame = Frame.createFrameConnectionMdp(data);
-				Context context = (Context) server.uniqueKey.attachment();
-				context.queueMessage(frame);
-				server.requestMap.put(data.getId(), this);
-				return frame;}).
-			
-			when(Data.DataConnectionServerMdpReponse.class, d -> {
-				Frame frame = Frame.createFrameConnectMdpServer(d);
-				Context context = server.requestMap.computeIfAbsent(d.getId(), id -> {throw new AssertionError();});
-				context.queueMessage(frame);
-				return frame;}).
-			
-			when(Data.DataError.class, d -> {
-				Frame frame = Frame.createFrameError(d);
-				queueMessage(frame);
-				return frame;}).
-			
-			when(Data.DataPrivateConnectionRequested.class, d -> {
-				Context context = server.loginMap.get(d.login());
-				if (context == null) {
-					Frame error = errorFrame((byte)2);
-					queueMessage(error);
-					return error;
-				}
-				var data = Data.createDataPrivateConnectionRequested(StandardOperation.PRIVATE_CONNEXION, (byte)2, login);
-				Frame frame = Frame.createFramePrivateConnectionRequested(data);
-				context.queueMessage(frame);
-				return frame;}).
-			
-			when(Data.DataPrivateConnectionReponse.class, d -> {
-				Context context = server.loginMap.get(d.login());
-				if (context == null) {
-					Frame error = errorFrame((byte)2);
-					queueMessage(error);
-					return error;
-				}
-				var data = Data.createDataPrivateConnectionReponse(StandardOperation.PRIVATE_CONNEXION, (byte)4, login, d.state());
-				Frame frame = Frame.createFramePrivateConnectionReponse(data);
-				context.queueMessage(frame);
-				return frame;}).
-			
-			when(Data.DataPrivateConnectionAccepted.class, d -> {
-				Context context = server.loginMap.get(d.login());
-				if (context == null) {
-					Frame error = errorFrame((byte)2);
-					queueMessage(error);
-					return error;
-				}
-				var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)6, login, d.port(), d.host(), d.token());
-				Frame frame = Frame.createFramePrivateConnectionAccepted(data);
-				context.queueMessage(frame);
-				return frame;})/*.
-			
-			when(Data.DataPrivateConnectionConnect.class, d -> {
-				Context context = server.loginMap.get(d.login());
-				if (context == null) {
-					Frame error = errorFrame((byte)2);
-					queueMessage(error);
-					return error;
-				}
-				Data.DataPrivateConnectionConnect data = Data.createDataPrivateConnectionConnect(StandardOperation.PRIVATE_CONNEXION, (byte)7, d.login(), d.token());
-				Frame frame = Frame.createFramePrivateConnectionConnect(data);
-				queueMessage(frame);
-				return frame;
-			})*/;
+			this.fv = fv;
 		}
-		
-		private Frame errorFrame(byte requestCode) {
-			var data = Data.createDataError(StandardOperation.ERROR, requestCode);
-			return Frame.createFrameError(data);
+
+		private static Context contextServerMdp(ServerChatHack server, SelectionKey key) {
+			FrameVisitor fv = new FrameVisitor().
+
+					when(Data.DataConnectionServerMdpReponse.class, d -> {
+						Frame frame = Frame.createFrameAck(Data.createDataAck(StandardOperation.ACK, StandardOperation.CONNEXION));
+						if (!server.requestMap.containsKey(d.getId())) {
+							logger.info("ERROR no such client demand a connection.");
+							return frame;
+						}
+
+						DataMdp dataMdp = server.requestMap.get(d.getId());
+						if (dataMdp.key.attachment() != null) {
+							try {
+								SocketChannel sc = (SocketChannel) dataMdp.key.channel();
+								sc.configureBlocking(false);
+								var k = sc.register(server.selector, SelectionKey.OP_READ);
+								k.attach(contextClient(server, k));
+								if 	((dataMdp.data.connexion() == 1 && d.getOpcode() == 1)
+									|| (dataMdp.data.connexion() == 2 && d.getOpcode() == 0)){
+									((Context)k.attachment()).queueMessage(frame);
+								} else {
+									((Context)k.attachment()).queueMessage(errorFrame(StandardOperation.CONNEXION));
+									((Context)k.attachment()).silentlyClose();
+								}
+							} catch (ClosedChannelException e) {
+								return null;
+							} catch (IOException e) {
+								return null;
+							}
+						}
+						return frame;});
+
+			return new Context(server, key, fv);
+		}
+
+		private static Context contextClient(ServerChatHack server, SelectionKey key) {
+			FrameVisitor fv = new FrameVisitor().
+					when(Data.DataConnectionClient.class, d -> {
+						if (server.loginMap.containsKey(d.login())) {
+							((Context)key.attachment()).queueMessage(errorFrame(StandardOperation.CONNEXION));
+							((Context)key.attachment()).silentlyClose();
+							return null;
+						}
+						server.loginMap.putIfAbsent(d.login(), key);
+						Data.DataConnectionServerMdp data = Data.createDataConnectionServerMdp(d);
+						Frame frame = Frame.createFrameConnectionMdp(data);
+						Context context = (Context) server.uniqueKey.attachment();
+						context.queueMessage(frame);
+						server.requestMap.put(data.getId(), new DataMdp(key, data));
+						key.cancel();
+						return frame;}).
+
+					when(Data.DataGlobalClient.class, d -> {
+						var data = d.transformTo("Ailton");
+						Frame frame = Frame.createFrameGlobal(data);
+						server.broadcast(frame);
+						return frame;
+					});
+			return new Context(server, key, fv);
+		}
+
+
+		private static Frame errorFrame(StandardOperation requestCode) {
+			return Frame.createFrameError(Data.createDataError(StandardOperation.ERROR, requestCode));
 		}
 
 		/**
@@ -155,7 +158,7 @@ public class ServerChatHack {
 					silentlyClose();
 					return;
 				}
-				
+
 			}
 		}
 
@@ -190,6 +193,9 @@ public class ServerChatHack {
 		 */
 		private void updateInterestOps() {
 			int ops = 0;
+			if (!key.isValid()) {
+				return;
+			}
 			if (bbin.hasRemaining() && !closed) {
 				ops |= SelectionKey.OP_READ;
 			}
@@ -243,7 +249,7 @@ public class ServerChatHack {
 			processOut();
 			updateInterestOps();
 		}
-		
+
 		private void doConnect() throws IOException {
 			if (!sc.finishConnect()) {
 				return;
@@ -257,12 +263,12 @@ public class ServerChatHack {
 	private SelectionKey uniqueKey;
 	private final ServerSocketChannel serverSocketChannel;
 	private final Selector selector;
-	private final Map<Long, Context> requestMap = new HashMap<>();
-	private final Map<String, Context> loginMap = new HashMap<>();
+	private final Map<Long, DataMdp> requestMap = new HashMap<>();
+	private final Map<String, SelectionKey> loginMap = new HashMap<>();
 	private final SocketChannel scPassword;
-	
-	
-	
+
+
+
 	public ServerChatHack(int port, String host, int mdpPort) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
@@ -270,32 +276,32 @@ public class ServerChatHack {
 		serverPasswordAdress = new InetSocketAddress(host, mdpPort);
 		scPassword = SocketChannel.open();
 	}
-	
-	
+
+
 	public void launch() throws IOException {
-		
+
 		serverSocketChannel.configureBlocking(false);
 		serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-		
+
 		scPassword.configureBlocking(false);
 		scPassword.connect(serverPasswordAdress);
 		logger.info("Connnected to DataBase server:"+serverPasswordAdress);
 		uniqueKey=scPassword.register(selector, SelectionKey.OP_CONNECT);
-		uniqueKey.attach(new Context(this, uniqueKey));
-		
+		uniqueKey.attach(Context.contextServerMdp(this, uniqueKey));
+
 		while (!Thread.interrupted()) {
 			printKeys(); // for debug
 			System.out.println("Starting select");
 			try {
 				selector.select(this::treatKey);
-				
+
 			} catch (UncheckedIOException tunneled) {
 				throw tunneled.getCause();
 			}
 			System.out.println("Select finished");
 		}
 	}
-	
+
 	private void treatKey(SelectionKey key) {
 		printSelectedKey(key); // for debug
 		try {
@@ -321,14 +327,14 @@ public class ServerChatHack {
 			silentlyClose(key);
 		}
 	}
-	
+
 	private void doAccept(SelectionKey key) throws IOException {
-	
+
 		SocketChannel sc = serverSocketChannel.accept();
 		if (sc != null) {
 			sc.configureBlocking(false);
 			SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
-			clientKey.attach(new Context(this, clientKey));
+			clientKey.attach(Context.contextClient(this, clientKey));
 		}
 	}
 
@@ -340,7 +346,7 @@ public class ServerChatHack {
 			// ignore exception
 		}
 	}
-	
+
 	/**
 	 * Add a message to all connected clients queue
 	 *
@@ -438,5 +444,5 @@ public class ServerChatHack {
 		return String.join(" and ", list);
 	}
 
-	
+
 }

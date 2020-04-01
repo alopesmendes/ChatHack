@@ -55,6 +55,23 @@ public class ChatChaton {
 			reader = SelectReaderOpcode.create(bbin);
 
 			fv = new FrameVisitor().
+					
+			when(Data.DataAck.class, d -> {
+				switch (d.request()) {
+					case CONNEXION:
+						try {
+							logger.info("Connected to: " + socketChannel.getLocalAddress());
+						} catch (IOException e) {
+						
+						}
+						break;
+	
+					default:
+						throw new AssertionError();
+				}
+				return null;
+			}).
+			
 			when(Data.DataConnectionClient.class, d -> Frame.createFrameConnection(d)).
 
 			when(Data.DataError.class, d -> {
@@ -65,27 +82,13 @@ public class ChatChaton {
 				} finally {
 					client.lock.unlock();
 				}
+				//silentlyClose();
 				return Frame.createFrameError(d);}).
 			
 			when(Data.DataGlobalClient.class, d -> {
 				Frame frame = Frame.createFrameGlobal(d);
 				queueMessage(frame.buffer());
 				client.selector.wakeup();
-				return frame;}).
-			
-			when(Data.DataConnectionServerMdpReponse.class, d -> {
-				Frame frame = Frame.createFrameConnectMdpServer(d);
-				if (d.getOpcode() == (byte)0) {
-					logger.info("Connection to server failed");
-					silentlyClose();
-					client.thread.interrupt();
-				} else if (d.getOpcode() == (byte)1) {
-					
-				} else {
-					logger.info("Error of byte");
-					client.thread.interrupt();
-					throw new IllegalArgumentException("byte is "+d.getOpcode()+" expetected 1 or 0");
-				}
 				return frame;}).
 			
 			when(Data.DataGlobalServer.class, d -> {
@@ -138,7 +141,7 @@ public class ChatChaton {
 					return frame;	
 				} else {
 					logger.info(d.login()+" denied the demand");
-					var data = Data.createDataError(StandardOperation.ERROR, (byte)2);
+					var data = Data.createDataError(StandardOperation.ERROR, StandardOperation.PRIVATE_CONNEXION);
 					Frame frame = Frame.createFrameError(data);
 					queueMessage(frame.buffer());
 					client.selector.wakeup();
@@ -182,6 +185,7 @@ public class ChatChaton {
 							break;
 						}
 					}
+					logger.info("Received file "+d.fileName());
 				} catch (IOException e) {
 					
 				}
@@ -282,7 +286,6 @@ public class ChatChaton {
 			if (!socketChannel.finishConnect()) {
 				return;
 			}
-			logger.info("Connected to: " + socketChannel.getLocalAddress());
 			updateInterestOps();
 		}
 
@@ -386,8 +389,10 @@ public class ChatChaton {
 				}
 			} else if (state == State.NONE) {
 				Context context = (Context) uniqueKey.attachment();
-				Data data = Data.createDataGlobalClient(StandardOperation.GLOBAL_MESSAGE, (byte)1, reponse);
-				context.fv.call(data);
+				var data = Data.createDataGlobalClient(StandardOperation.GLOBAL_MESSAGE, (byte)1, reponse);
+				Frame frame = Frame.createFrameGlobal(data);
+				context.queueMessage(frame.buffer());
+				selector.wakeup();
 			}
 			condition.signal();
 		} finally {

@@ -45,9 +45,9 @@ class DataTest {
 	}
 	
 	private void TestSameDataError() {
-		Data d1 = Data.createDataError(StandardOperation.ERROR, (byte)1);
-		Data d2 = Data.createDataError(StandardOperation.ERROR, (byte)1);
-		Data d3 = Data.createDataError(StandardOperation.ERROR, (byte)1);
+		Data d1 = Data.createDataError(StandardOperation.ERROR, StandardOperation.GLOBAL_MESSAGE);
+		Data d2 = Data.createDataError(StandardOperation.ERROR, StandardOperation.GLOBAL_MESSAGE);
+		Data d3 = Data.createDataError(StandardOperation.ERROR, StandardOperation.GLOBAL_MESSAGE);
 		assertAll(
 			() -> assertEquals(d1, d1),
 			() -> assertEquals(d1, d2),

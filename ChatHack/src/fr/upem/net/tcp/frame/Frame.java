@@ -3,6 +3,7 @@ package fr.upem.net.tcp.frame;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
+import fr.upem.net.tcp.frame.Data.DataAck;
 import fr.upem.net.tcp.frame.Data.DataConnectionClient;
 import fr.upem.net.tcp.frame.Data.DataConnectionServerMdp;
 import fr.upem.net.tcp.frame.Data.DataConnectionServerMdpReponse;
@@ -138,5 +139,10 @@ public interface Frame {
 	static Frame createFramePrivateFile(DataPrivateFile data) {
 		Objects.requireNonNull(data);
 		return new FramePrivateFile(data);
+	}
+	
+	static Frame createFrameAck(DataAck data) {
+		Objects.requireNonNull(data);
+		return new FrameAck(data);
 	}
 }

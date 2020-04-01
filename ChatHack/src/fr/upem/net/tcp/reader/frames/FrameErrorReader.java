@@ -37,9 +37,13 @@ public class FrameErrorReader implements Reader<Data> {
 				return requestStatus;
 			}
 			op_request = byteReader.get();
+			var op = StandardOperation.convert(op_request);
+			if (op.isEmpty()) {
+				return ProcessStatus.ERROR;
+			}
 			byteReader.reset();
 			state = State.DONE;
-			data = Data.createDataError(StandardOperation.ERROR, op_request);
+			data = Data.createDataError(StandardOperation.ERROR, op.get());
 			return ProcessStatus.DONE;
 		default:
 			throw new AssertionError();

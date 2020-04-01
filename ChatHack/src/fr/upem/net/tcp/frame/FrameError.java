@@ -15,7 +15,7 @@ class FrameError implements Frame {
 	@Override
 	public ByteBuffer buffer() {
 		ByteBuffer bb = ByteBuffer.allocate(2*Byte.BYTES);
-		bb.put(dataError.opcode.opcode()).put(dataError.requestCode);
+		bb.put(dataError.opcode.opcode()).put(dataError.requestCode.opcode());
 		bb.flip();
 		return bb;
 	}

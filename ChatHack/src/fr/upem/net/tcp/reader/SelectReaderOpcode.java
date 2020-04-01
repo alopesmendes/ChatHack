@@ -6,6 +6,7 @@ import java.util.HashMap;
 import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.basics.ByteReader;
+import fr.upem.net.tcp.reader.frames.FrameMdpReader;
 import fr.upem.net.tcp.reader.frames.FrameAckReader;
 import fr.upem.net.tcp.reader.frames.FrameErrorReader;
 import fr.upem.net.tcp.reader.frames.FrameGlobal;
@@ -38,10 +39,11 @@ public class SelectReaderOpcode implements Reader<Data> {
 		map.put(StandardOperation.CONNEXION.opcode(), new FramePublicConnectReader(bb));
 		map.put(StandardOperation.PRIVATE_CONNEXION.opcode(), FramePrivateConnectionReader.create(bb));
 		map.put(StandardOperation.ERROR.opcode(), new FrameErrorReader(bb));
-		map.put((byte)1, new FrameAckReader(bb, (byte)1));
-		map.put((byte)0, new FrameAckReader(bb, (byte)0));
 		map.put(StandardOperation.PRIVATE_MESSAGE.opcode(), new FramePrivateMessageReader(bb));
 		map.put(StandardOperation.PRIVATE_FILE.opcode(), new FramePrivateFileReader(bb));
+		map.put(StandardOperation.ACK.opcode(), new FrameAckReader(bb));
+		map.put((byte)1, new FrameMdpReader(bb, (byte)1));
+		map.put((byte)0, new FrameMdpReader(bb, (byte)0));
 		return new SelectReaderOpcode(bb, map);
 	}
 	

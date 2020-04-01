@@ -116,21 +116,21 @@ public interface Data {
 	
 	static class DataError implements Data {
 		final StandardOperation opcode;
-		final byte requestCode;
+		final StandardOperation requestCode;
 		
 		/**
 		 * Constructs a DataError with it's opcode and requestCode.
 		 * @param opcode
 		 * @param requestCode
 		 */
-		private DataError(StandardOperation opcode, byte requestCode) {
+		private DataError(StandardOperation opcode, StandardOperation requestCode) {
 			this.opcode = opcode;
 			this.requestCode = requestCode;
 		}
 		
 		@Override
 		public int hashCode() {
-			return Byte.hashCode(opcode.opcode()) ^ Byte.hashCode(requestCode);
+			return Byte.hashCode(opcode.opcode()) ^ Byte.hashCode(requestCode.opcode());
 		}
 		
 		@Override
@@ -437,6 +437,10 @@ public interface Data {
 					&& password.equals(d.password);
 		}
 		
+		public byte connexion() {
+			return typeConnexion;
+		}
+		
 		public long getId() {
 			return id;
 		}
@@ -571,6 +575,35 @@ public interface Data {
 		
 	}
 	
+	
+	static class DataAck implements Data {
+		final StandardOperation opcode;
+		final StandardOperation requestCode;
+		
+		private DataAck(StandardOperation opcode, StandardOperation requestCode) {
+			this.opcode = opcode;
+			this.requestCode = requestCode;
+		}
+		
+		@Override
+		public int hashCode() {
+			return opcode.hashCode() ^ requestCode.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataAck)) {
+				return false;
+			}
+			DataAck d = (DataAck)obj;
+			return 	d.opcode==opcode && d.requestCode==requestCode;
+		}
+		
+		public StandardOperation request() {
+			return requestCode;
+		}
+	}
+	
 	/**
 	 * Creates a DataText.
 	 * @param text a {@link String}.
@@ -616,7 +649,7 @@ public interface Data {
 	 * @param requestCode a {@link Byte}.
 	 * @return DataError.
 	 */
-	static DataError createDataError(StandardOperation opcode, byte requestCode) {
+	static DataError createDataError(StandardOperation opcode, StandardOperation requestCode) {
 		return new DataError(opcode, requestCode);
 	}
 	
@@ -725,7 +758,7 @@ public interface Data {
 	 * Creates a DataPrivateConnectionClient.
 	 * @param opcode a {@link StandardOperation}
 	 * @param message a {@link String}
-	 * @return
+	 * @return DataPrivateMessage.
 	 */
 	static DataPrivateMessage createDataPrivateMessage(StandardOperation opcode,String login, String message) {
 		Objects.requireNonNull(message);
@@ -735,11 +768,23 @@ public interface Data {
 		return new DataPrivateMessage(opcode, loginData, messageData);
 	}
 	
+	/**
+	 * Creates a DataPrivateFile.
+	 * @param opcode a {@link StandardOperation}.
+	 * @param login a {@link String}.
+	 * @param fileName a {@link String}.
+	 * @param fileBuffer a {@link ByteBuffer}.
+	 * @return DataPrivateFile.
+	 */
 	static DataPrivateFile createDataPrivateFile(StandardOperation opcode, String login, String fileName, ByteBuffer fileBuffer) {
 		Objects.requireNonNull(fileName);
 		Objects.requireNonNull(fileBuffer);
 		DataText loginData = new DataText(login);
 		DataText fileNameData = new DataText(fileName);
 		return new DataPrivateFile(opcode, loginData, fileNameData, fileBuffer);
+	}
+	
+	static DataAck createDataAck(StandardOperation opcode, StandardOperation requestCode) {
+		return new DataAck(opcode, requestCode);
 	}
 }
