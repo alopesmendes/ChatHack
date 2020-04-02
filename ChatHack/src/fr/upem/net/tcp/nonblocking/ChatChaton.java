@@ -125,7 +125,7 @@ public class ChatChaton {
 			when(Data.DataPrivateConnectionReponse.class, d -> {
 				if (d.state()==0) {
 					logger.info(d.login()+" accepted the demand");
-					var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)5, d.login(), 4646, "localhost", System.currentTimeMillis());
+					var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)5, d.login(), client.clientPort, "localhost", System.currentTimeMillis());
 					Frame frame = Frame.createFramePrivateConnectionAccepted(data);
 					queueMessage(frame.buffer());
 					client.selector.wakeup();
@@ -337,7 +337,9 @@ public class ChatChaton {
 	private Map<String, Context> map = new HashMap<>();
 	private final ServerSocketChannel serverSocketChannel;
 	private final Path path;
-
+	private final int clientPort;
+	
+	
 	public ChatChaton(Path path, int clientPort, String hostname, int port, String login, Optional<String> password) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		selector = Selector.open();
@@ -347,6 +349,7 @@ public class ChatChaton {
 		this.login = login;
 		this.password = password;
 		this.path = path;
+		this.clientPort = clientPort;
 	}
 
 	private void sendPublicConnectionRequest() throws InterruptedException {

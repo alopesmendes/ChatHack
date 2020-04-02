@@ -131,8 +131,16 @@ public class ServerChatHack {
 					when(Data.DataGlobalClient.class, d -> {
 						Frame frame = Frame.createFrameGlobal(d);
 						server.broadcast(frame);
-						return frame;
-					});
+						return frame;}).
+					
+					when(Data.DataPrivateConnectionRequested.class, d -> {
+						return null;}).
+					
+					when(Data.DataPrivateConnectionReponse.class, d -> {
+						return null;}).
+					
+					when(Data.DataPrivateConnectionAccepted.class, d -> {
+						return null;});
 			return new Context(server, key, fv);
 		}
 
@@ -202,16 +210,13 @@ public class ServerChatHack {
 		 */
 		private void updateInterestOps() {
 			int ops = 0;
-			if (!key.isValid()) {
-				return;
-			}
 			if (bbin.hasRemaining() && !closed) {
 				ops |= SelectionKey.OP_READ;
 			}
 			if (bbout.position() != 0) {
 				ops |= SelectionKey.OP_WRITE;
 			}
-			if (ops == 0) {
+			if (ops == 0 && key.isValid()) {
 				silentlyClose();
 			} else {
 				key.interestOps(ops);
