@@ -133,8 +133,8 @@ public class ChatChaton {
 		
 		when(Data.DataPrivateConnectionReponse.class, d -> {
 			if (d.state()==0) {
-				logger.info(d.login()+" accepted the demand");
-				var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)5, d.login(), 4646, "localhost", System.currentTimeMillis());
+				logger.info(d.login()+" accepted the demand "+clientPort);
+				var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)5, d.login(), clientPort, "localhost", System.currentTimeMillis());
 				Frame frame = Frame.createFramePrivateConnectionAccepted(data);
 				clientSendServerPrivateConnectionRequeste(frame.buffer());
 				lock.lock();
