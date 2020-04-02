@@ -22,6 +22,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.upem.net.tcp.frame.Data;
+import fr.upem.net.tcp.frame.Data.DataConnectionClient;
 import fr.upem.net.tcp.frame.Data.DataConnectionServerMdp;
 import fr.upem.net.tcp.frame.Frame;
 import fr.upem.net.tcp.frame.FrameVisitor;
@@ -33,15 +34,20 @@ public class ServerChatHack {
 
 	static private class DataMdp {
 		private final SelectionKey key;
-		private final Data.DataConnectionServerMdp data;
+		private final Data.DataConnectionClient client;
+		private final Data.DataConnectionServerMdp mdp;
 		/**
 		 * @param key
-		 * @param data
+		 * @param client
+		 * @param mdp
 		 */
-		private DataMdp(SelectionKey key, DataConnectionServerMdp data) {
+		private DataMdp(SelectionKey key, DataConnectionClient client, DataConnectionServerMdp mdp) {
 			this.key = key;
-			this.data = data;
+			this.client = client;
+			this.mdp = mdp;
 		}
+		
+		
 
 
 	}
@@ -79,14 +85,18 @@ public class ServerChatHack {
 						DataMdp dataMdp = server.requestMap.get(d.getId());
 						if (dataMdp.key.attachment() != null) {
 							try {
+								
 								SocketChannel sc = (SocketChannel) dataMdp.key.channel();
 								sc.configureBlocking(false);
 								var k = sc.register(server.selector, SelectionKey.OP_READ);
 								k.attach(contextClient(server, k));
-								if 	((dataMdp.data.connexion() == 1 && d.getOpcode() == 1)
-									|| (dataMdp.data.connexion() == 2 && d.getOpcode() == 0)){
+								server.loginMap.put(dataMdp.client.login(), k);
+								if 	((dataMdp.mdp.connexion() == 1 && d.getOpcode() == 1)
+									|| (dataMdp.mdp.connexion() == 2 && d.getOpcode() == 0)){
+									
 									((Context)k.attachment()).queueMessage(frame);
 								} else {
+									
 									((Context)k.attachment()).queueMessage(errorFrame(StandardOperation.CONNEXION));
 									((Context)k.attachment()).silentlyClose();
 								}
@@ -104,23 +114,22 @@ public class ServerChatHack {
 		private static Context contextClient(ServerChatHack server, SelectionKey key) {
 			FrameVisitor fv = new FrameVisitor().
 					when(Data.DataConnectionClient.class, d -> {
-						if (server.loginMap.containsKey(d.login())) {
+						if (server.loginMap.containsKey(d.login()) && server.loginMap.get(d.login()).isValid()) {
 							((Context)key.attachment()).queueMessage(errorFrame(StandardOperation.CONNEXION));
 							((Context)key.attachment()).silentlyClose();
 							return null;
 						}
-						server.loginMap.putIfAbsent(d.login(), key);
+						server.loginMap.put(d.login(), key);
 						Data.DataConnectionServerMdp data = Data.createDataConnectionServerMdp(d);
 						Frame frame = Frame.createFrameConnectionMdp(data);
 						Context context = (Context) server.uniqueKey.attachment();
 						context.queueMessage(frame);
-						server.requestMap.put(data.getId(), new DataMdp(key, data));
+						server.requestMap.put(data.getId(), new DataMdp(key, d, data));
 						key.cancel();
 						return frame;}).
 
 					when(Data.DataGlobalClient.class, d -> {
-						var data = d.transformTo("Ailton");
-						Frame frame = Frame.createFrameGlobal(data);
+						Frame frame = Frame.createFrameGlobal(d);
 						server.broadcast(frame);
 						return frame;
 					});
@@ -301,7 +310,7 @@ public class ServerChatHack {
 			System.out.println("Select finished");
 		}
 	}
-
+	
 	private void treatKey(SelectionKey key) {
 		printSelectedKey(key); // for debug
 		try {

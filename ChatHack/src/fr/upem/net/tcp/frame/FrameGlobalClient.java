@@ -14,9 +14,10 @@ class FrameGlobalClient implements Frame {
 	@Override
 	public ByteBuffer buffer() {
 		ByteBuffer message = new FrameText(dataGlobal.message).buffer();
-		ByteBuffer bb = ByteBuffer.allocate(2*Byte.BYTES+message.remaining());
-		bb.put(dataGlobal.opcode.opcode()).put(dataGlobal.step);
-		bb.put(message);
+		ByteBuffer login = new FrameText(dataGlobal.login).buffer();
+		ByteBuffer bb = ByteBuffer.allocate(Byte.BYTES + login.remaining() + message.remaining());
+		bb.put(dataGlobal.opcode.opcode());
+		bb.put(login).put(message);
 		bb.flip();
 		return bb;
 	}

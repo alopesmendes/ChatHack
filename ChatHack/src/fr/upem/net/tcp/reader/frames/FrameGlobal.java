@@ -1,36 +1,25 @@
 package fr.upem.net.tcp.reader.frames;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-
 import fr.upem.net.tcp.frame.Data;
+import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
-import fr.upem.net.tcp.reader.basics.ByteReader;
+import fr.upem.net.tcp.reader.basics.StringReader;
 
 public class FrameGlobal implements Reader<Data> {
 	
 	private enum State {
-		DONE, WAITING_BYTE, WAITING_READER, ERROR;
+		DONE, WAITING_LOGIN, WAITING_READER, ERROR;
 	}
 	
-	private State state = State.WAITING_BYTE;
-	private final HashMap<Byte, Reader<Data>> map;
-	private ByteReader byteReader;
-	private Reader<Data> reader;
+	private State state = State.WAITING_LOGIN;
+	private StringReader stringReader;
 	private Data data;
+	private String login;
+	private String message;
 	
-	private FrameGlobal(ByteReader byteReader, HashMap<Byte, Reader<Data>> map) {
-		this.map = map;
-		this.byteReader = byteReader;
-	}
-	
-	public static FrameGlobal create(ByteBuffer bb) {
-		HashMap<Byte, Reader<Data>> map = new HashMap<>();
-		map.put((byte)1, new FrameGlobalSendingReader(bb, (byte)1));
-		map.put((byte)2, new FrameGlobalReceivingReader(bb, (byte)2));
-		//map.put((byte) 1, new FrameGlobalReceivingReader(bb));
-		//map.put((byte)2, new FrameGlobalSendingReader(bb, "Ailton"));
-		return new FrameGlobal(new ByteReader(bb), map);
+	public FrameGlobal(ByteBuffer bb) {
+		this.stringReader = new StringReader(bb);
 	}
 	
 	@Override
@@ -40,23 +29,23 @@ public class FrameGlobal implements Reader<Data> {
 		}
 		ProcessStatus ps;
 		switch (state) {
-			case WAITING_BYTE:
-				ps = byteReader.process();
+			case WAITING_LOGIN:
+				ps = stringReader.process();
 				if (ps != ProcessStatus.DONE) {
 					return ps;
 				}
-				Byte b = byteReader.get();
-				reader = map.get(b);
+				login = stringReader.get();
 				state = State.WAITING_READER;
-				byteReader.reset();
+				stringReader.reset();
 			case WAITING_READER:
-				ps = reader.process();
+				ps = stringReader.process();
 				if (ps != ProcessStatus.DONE) {
 					return ps;
 				}
-				data = reader.get();
-				reader.reset();
+				message = stringReader.get();
+				stringReader.reset();
 				state = State.DONE;
+				data = Data.createDataGlobalClient(StandardOperation.GLOBAL_MESSAGE, login, message);
 				return ProcessStatus.DONE;
 			default:
 				throw new AssertionError();
@@ -73,9 +62,8 @@ public class FrameGlobal implements Reader<Data> {
 
 	@Override
 	public void reset() {
-		state = State.WAITING_BYTE;
-		byteReader.reset();
-		reader.reset();
+		state = State.WAITING_LOGIN;
+		stringReader.reset();
 	}
 
 }

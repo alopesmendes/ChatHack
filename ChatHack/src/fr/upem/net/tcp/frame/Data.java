@@ -78,7 +78,7 @@ public interface Data {
 	
 	static class DataGlobalClient implements Data {
 		final StandardOperation opcode;
-		final byte step;
+		final DataText login;
 		final DataText message;
 		
 		/**
@@ -87,15 +87,15 @@ public interface Data {
 		 * @param step a byte
 		 * @param message a DataText
 		 */
-		private DataGlobalClient(StandardOperation opcode, byte step, DataText message) {
+		private DataGlobalClient(StandardOperation opcode, DataText login, DataText message) {
 			this.opcode = opcode;
-			this.step = step;
+			this.login = login;
 			this.message = message;
 		}
 		
 		@Override
 		public int hashCode() {
-			return Byte.hashCode(opcode.opcode())^Byte.hashCode(step)^message.hashCode();
+			return Byte.hashCode(opcode.opcode()) ^ login.hashCode() ^ message.hashCode();
 		}
 		
 		@Override
@@ -104,14 +104,17 @@ public interface Data {
 				return false;
 			}
 			DataGlobalClient d = (DataGlobalClient)obj;
-			return step==d.step && opcode==d.opcode && d.message.equals(message);
+			return opcode==d.opcode && d.login.equals(login) && d.message.equals(message);
 		}
 		
-		public DataGlobalServer transformTo(String pseudo) {
-			Objects.requireNonNull(pseudo);
-			DataText pseudoData = new DataText(pseudo);
-			return new DataGlobalServer(opcode, (byte)(step+1), pseudoData, message);
+		public String login() {
+			return login.text;
 		}
+		
+		public String message() {
+			return message.text;
+		}
+		
 	}
 	
 	static class DataError implements Data {
@@ -637,10 +640,11 @@ public interface Data {
 	 * @param message a {@link String}.
 	 * @return DataGlobalClient.
 	 */
-	static DataGlobalClient createDataGlobalClient(StandardOperation opcode, byte step, String message) {
+	static DataGlobalClient createDataGlobalClient(StandardOperation opcode, String login, String message) {
 		Objects.requireNonNull(message);
+		DataText loginData = new DataText(login);
 		DataText messageData = new DataText(message);
-		return new DataGlobalClient(opcode, step, messageData);
+		return new DataGlobalClient(opcode, loginData, messageData);
 	}
 	
 	/**

@@ -35,7 +35,7 @@ public class SelectReaderOpcode implements Reader<Data> {
 	
 	public static Reader<Data> create(ByteBuffer bb) {
 		HashMap<Byte, Reader<Data>> map = new HashMap<>();
-		map.put(StandardOperation.GLOBAL_MESSAGE.opcode(), FrameGlobal.create(bb));
+		map.put(StandardOperation.GLOBAL_MESSAGE.opcode(), new FrameGlobal(bb));
 		map.put(StandardOperation.CONNEXION.opcode(), new FramePublicConnectReader(bb));
 		map.put(StandardOperation.PRIVATE_CONNEXION.opcode(), FramePrivateConnectionReader.create(bb));
 		map.put(StandardOperation.ERROR.opcode(), new FrameErrorReader(bb));

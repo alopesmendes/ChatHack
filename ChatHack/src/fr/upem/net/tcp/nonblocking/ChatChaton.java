@@ -87,8 +87,7 @@ public class ChatChaton {
 			
 			when(Data.DataGlobalClient.class, d -> {
 				Frame frame = Frame.createFrameGlobal(d);
-				queueMessage(frame.buffer());
-				client.selector.wakeup();
+				System.out.println(d.login()+":"+d.message());
 				return frame;}).
 			
 			when(Data.DataGlobalServer.class, d -> {
@@ -389,7 +388,7 @@ public class ChatChaton {
 				}
 			} else if (state == State.NONE) {
 				Context context = (Context) uniqueKey.attachment();
-				var data = Data.createDataGlobalClient(StandardOperation.GLOBAL_MESSAGE, (byte)1, reponse);
+				var data = Data.createDataGlobalClient(StandardOperation.GLOBAL_MESSAGE, login, reponse);
 				Frame frame = Frame.createFrameGlobal(data);
 				context.queueMessage(frame.buffer());
 				selector.wakeup();
