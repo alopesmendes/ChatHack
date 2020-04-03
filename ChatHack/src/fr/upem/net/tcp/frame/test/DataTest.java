@@ -13,10 +13,7 @@ class DataTest {
 	@Test
 	void TestCreationParametersShouldNotBeNull() {
 		assertAll(
-			() -> assertThrows(NullPointerException.class, () -> Data.createDataText(null)),
-			() -> assertThrows(NullPointerException.class, () -> Data.createDataGlobalServer(StandardOperation.GLOBAL_MESSAGE, (byte)0, null, null)),
-			() -> assertThrows(NullPointerException.class, () -> Data.createDataGlobalServer(StandardOperation.GLOBAL_MESSAGE, (byte)0, null, "")),
-			() -> assertThrows(NullPointerException.class, () -> Data.createDataGlobalServer(StandardOperation.GLOBAL_MESSAGE, (byte)0, "", null))
+			() -> assertThrows(NullPointerException.class, () -> Data.createDataText(null))
 		);
 	}
 	
@@ -31,18 +28,7 @@ class DataTest {
 			() -> assertEquals(d1, d3)
 		);
 	}
-	
-	private void TestSameDataGlobal() {
-		Data d1 = Data.createDataGlobalServer(StandardOperation.GLOBAL_MESSAGE, (byte)2, "Will", "bonjour");
-		Data d2 = Data.createDataGlobalServer(StandardOperation.GLOBAL_MESSAGE, (byte)2, "Will", "bonjour");
-		Data d3 = Data.createDataGlobalServer(StandardOperation.GLOBAL_MESSAGE, (byte)2, "Will", "bonjour");
-		assertAll(
-			() -> assertEquals(d1, d1),
-			() -> assertEquals(d1, d2),
-			() -> assertEquals(d2, d3),
-			() -> assertEquals(d1, d3)
-		);
-	}
+
 	
 	private void TestSameDataError() {
 		Data d1 = Data.createDataError(StandardOperation.ERROR, StandardOperation.GLOBAL_MESSAGE);
@@ -60,7 +46,6 @@ class DataTest {
 	void TestSameData() {
 		assertAll(
 			() -> TestSameDataText(),
-			() -> TestSameDataGlobal(),
 			() -> TestSameDataError()
 		);
 	}

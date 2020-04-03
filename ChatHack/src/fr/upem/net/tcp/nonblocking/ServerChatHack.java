@@ -134,13 +134,62 @@ public class ServerChatHack {
 						return frame;}).
 					
 					when(Data.DataPrivateConnectionRequested.class, d -> {
-						return null;}).
+						
+						SelectionKey requestKey = server.loginMap.get(d.secondClient());
+						if (requestKey == null || !requestKey.isValid() || requestKey.attachment() == null) {
+							 SelectionKey senderKey = server.loginMap.get(d.firstClient());
+							 Frame error = errorFrame(StandardOperation.PRIVATE_CONNEXION);
+							 if (senderKey == null || !senderKey.isValid() || senderKey.attachment() == null) {
+								 return error;
+							 }
+							 Context context = (Context) senderKey.attachment();
+							 context.queueMessage(error);
+							 return error;
+						}
+						Context context = (Context) requestKey.attachment();
+						var data = Data.createDataPrivateConnectionRequested(StandardOperation.PRIVATE_CONNEXION, (byte)2, d.secondClient(), d.firstClient());
+						Frame frame = Frame.createFramePrivateConnectionRequested(data);
+						context.queueMessage(frame);
+						return frame;}).
 					
 					when(Data.DataPrivateConnectionReponse.class, d -> {
-						return null;}).
+						SelectionKey requestKey = server.loginMap.get(d.secondClient());
+						if (requestKey == null || !requestKey.isValid() || requestKey.attachment() == null) {
+							 SelectionKey senderKey = server.loginMap.get(d.firstClient());
+							 Frame error = errorFrame(StandardOperation.PRIVATE_CONNEXION);
+							 if (senderKey == null || !senderKey.isValid() || senderKey.attachment() == null) {
+								 return error;
+							 }
+							 Context context = (Context) senderKey.attachment();
+							 context.queueMessage(error);
+							 return error;
+						}
+						Context context = (Context) requestKey.attachment();
+						var data = Data.createDataPrivateConnectionReponse(StandardOperation.PRIVATE_CONNEXION, (byte)4, d.secondClient(), d.firstClient(), d.state());
+						Frame frame = Frame.createFramePrivateConnectionReponse(data);
+						context.queueMessage(frame);
+						return frame;}).
 					
 					when(Data.DataPrivateConnectionAccepted.class, d -> {
-						return null;});
+						SelectionKey requestKey = server.loginMap.get(d.secondClient());
+						if (requestKey == null || !requestKey.isValid() || requestKey.attachment() == null) {
+							 SelectionKey senderKey = server.loginMap.get(d.firstClient());
+							 Frame error = errorFrame(StandardOperation.PRIVATE_CONNEXION);
+							 if (senderKey == null || !senderKey.isValid() || senderKey.attachment() == null) {
+								 return error;
+							 }
+							 Context context = (Context) senderKey.attachment();
+							 context.queueMessage(error);
+							 return error;
+						}
+						Context context = (Context) requestKey.attachment();
+						
+						var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)6, 
+								d.secondClient(), d.firstClient(), d.port(), d.host(), d.token());
+						
+						Frame frame = Frame.createFramePrivateConnectionAccepted(data);
+						context.queueMessage(frame);
+						return frame;});
 			return new Context(server, key, fv);
 		}
 
@@ -210,13 +259,16 @@ public class ServerChatHack {
 		 */
 		private void updateInterestOps() {
 			int ops = 0;
+			if (!key.isValid()) {
+				return;
+			}
 			if (bbin.hasRemaining() && !closed) {
 				ops |= SelectionKey.OP_READ;
 			}
 			if (bbout.position() != 0) {
 				ops |= SelectionKey.OP_WRITE;
 			}
-			if (ops == 0 && key.isValid()) {
+			if (ops == 0) {
 				silentlyClose();
 			} else {
 				key.interestOps(ops);

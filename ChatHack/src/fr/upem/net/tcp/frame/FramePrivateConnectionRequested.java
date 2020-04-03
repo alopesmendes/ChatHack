@@ -16,10 +16,11 @@ class FramePrivateConnectionRequested implements Frame {
 
 	@Override
 	public ByteBuffer buffer() {
-		ByteBuffer login = new FrameText(data.loginRequest).buffer();
-		ByteBuffer bb = ByteBuffer.allocate(2*Byte.BYTES + login.remaining());
+		ByteBuffer firstClient = new FrameText(data.firstClient).buffer();
+		ByteBuffer secondClient = new FrameText(data.secondClient).buffer();
+		ByteBuffer bb = ByteBuffer.allocate(2*Byte.BYTES + secondClient.remaining() +  firstClient.remaining());
 		bb.put(data.opcode.opcode()).put(data.step);
-		bb.put(login);
+		bb.put(firstClient).put(secondClient);
 		bb.flip();
 		return bb;
 	}

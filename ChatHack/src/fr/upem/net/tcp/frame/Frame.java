@@ -9,7 +9,6 @@ import fr.upem.net.tcp.frame.Data.DataConnectionServerMdp;
 import fr.upem.net.tcp.frame.Data.DataConnectionServerMdpReponse;
 import fr.upem.net.tcp.frame.Data.DataError;
 import fr.upem.net.tcp.frame.Data.DataGlobalClient;
-import fr.upem.net.tcp.frame.Data.DataGlobalServer;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionAccepted;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionConnect;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionReponse;
@@ -24,17 +23,6 @@ public interface Frame {
 	 * @return the buffer according to the frame.
 	 */
 	ByteBuffer buffer();
-	
-	
-	/**
-	 * Creates a Global Frame.
-	 * @param dataGlobal a DataGlobal.
-	 * @return FrameGlobal.
-	 */
-	static Frame createFrameGlobal(DataGlobalServer dataGlobal) {
-		Objects.requireNonNull(dataGlobal);
-		return new FrameGlobalServer(dataGlobal);
-	}
 	
 	static Frame createFrameGlobal(DataGlobalClient dataGlobal) {
 		Objects.requireNonNull(dataGlobal);

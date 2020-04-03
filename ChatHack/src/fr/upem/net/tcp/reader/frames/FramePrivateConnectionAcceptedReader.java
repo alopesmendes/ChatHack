@@ -12,17 +12,19 @@ import fr.upem.net.tcp.reader.basics.StringReader;
 public class FramePrivateConnectionAcceptedReader implements Reader<Data> {
 	
 	private enum State {
-		DONE, WAITING_LOGIN, WAITING_PORT, WAITING_HOST, WAITING_TOKEN, ERROR;
+		DONE, WAITING_FIRST_CLIENT, WAITING_SECOND_CLIENT, WAITING_PORT, WAITING_HOST, WAITING_TOKEN, ERROR;
 	}
 	
-	private State state = State.WAITING_LOGIN;
+	private State state = State.WAITING_FIRST_CLIENT;
 	private final byte step;
 	private StringReader stringReader;
 	private IntReader intReader;
 	private LongReader longReader;
-	private String login;
+	private String firstClient;
+	private String secondClient;
 	private int port;
 	private String host;
+	private long token;
 	private Data data;
 	
 	public FramePrivateConnectionAcceptedReader(byte step, ByteBuffer bb) {
@@ -38,12 +40,20 @@ public class FramePrivateConnectionAcceptedReader implements Reader<Data> {
 			throw new IllegalArgumentException();
 		}
 		switch (state) {
-			case WAITING_LOGIN:
+			case WAITING_FIRST_CLIENT:
 				ProcessStatus processLogin = stringReader.process();
 				if (processLogin != ProcessStatus.DONE) {
 					return processLogin;
 				}
-				login = stringReader.get();
+				firstClient = stringReader.get();
+				stringReader.reset();
+				state = State.WAITING_SECOND_CLIENT;
+			case WAITING_SECOND_CLIENT:
+				ProcessStatus processSecondClient = stringReader.process();
+				if (processSecondClient != ProcessStatus.DONE) {
+					return processSecondClient;
+				}
+				secondClient = stringReader.get();
 				stringReader.reset();
 				state = State.WAITING_PORT;
 			case WAITING_PORT:
@@ -67,10 +77,10 @@ public class FramePrivateConnectionAcceptedReader implements Reader<Data> {
 				if (processToken != ProcessStatus.DONE) {
 					return processToken;
 				}
-				long token = longReader.get();
+				token = longReader.get();
 				longReader.reset();
 				state = State.DONE;
-				data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, step, login, port, host, token);
+				data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, step, firstClient, secondClient, port, host, token);
 				return ProcessStatus.DONE;
 				
 		default:
@@ -88,7 +98,7 @@ public class FramePrivateConnectionAcceptedReader implements Reader<Data> {
 
 	@Override
 	public void reset() {
-		state = State.WAITING_LOGIN;
+		state = State.WAITING_FIRST_CLIENT;
 		stringReader.reset();
 		intReader.reset();
 		longReader.reset();

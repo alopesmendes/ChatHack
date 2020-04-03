@@ -29,16 +29,6 @@ public class FrameVisitor {
 				.apply(receiver);
 	}
 	
-	/**
-	 * @return FrameVisitor.
-	 */
-	public static FrameVisitor create() {
-		FrameVisitor fv = new FrameVisitor();
-		return 	fv.when(Data.DataGlobalServer.class, d -> Frame.createFrameGlobal(d)).
-				when(Data.DataGlobalClient.class, d -> Frame.createFrameGlobal(d)).
-				when(Data.DataError.class, d -> Frame.createFrameError(d)).
-				when(Data.DataConnectionClient.class, d -> Frame.createFrameConnection(d));
-	}
 	
 	@Override
 	public int hashCode() {

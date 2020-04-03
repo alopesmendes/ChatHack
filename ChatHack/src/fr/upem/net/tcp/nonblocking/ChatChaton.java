@@ -60,7 +60,7 @@ public class ChatChaton {
 				switch (d.request()) {
 					case CONNEXION:
 						try {
-							logger.info("Connected to: " + socketChannel.getLocalAddress());
+							logger.info("Connected to: " + socketChannel.getRemoteAddress());
 						} catch (IOException e) {
 						
 						}
@@ -90,11 +90,6 @@ public class ChatChaton {
 				System.out.println(d.login()+":"+d.message());
 				return frame;}).
 			
-			when(Data.DataGlobalServer.class, d -> {
-				Frame frame = Frame.createFrameGlobal(d);
-				System.out.println(d.login()+":"+d.message());
-				return frame;}).
-			
 			when(Data.DataPrivateConnectionRequested.class, d -> {
 				Frame frame = Frame.createFramePrivateConnectionRequested(d);
 				if (d.step()==1) {
@@ -103,13 +98,13 @@ public class ChatChaton {
 				} else {
 					client.lock.lock();
 					try {
-						logger.info(d.login()+" wants to start a private conversation enter O/N");
+						logger.info(d.secondClient()+" wants to start a private conversation enter O/N");
 						client.state = State.WATING_REPONSE;
 						while (client.state != State.NO && client.state != State.YES) {
 							client.condition.await();
 						}
 						byte s = (byte) (client.state == State.YES ? 0 : 1);
-						var data = Data.createDataPrivateConnectionReponse(d.opcode(), (byte)3, d.login(), s);
+						var data = Data.createDataPrivateConnectionReponse(d.opcode(), (byte)3, d.firstClient(), d.secondClient(), s);
 						frame = Frame.createFramePrivateConnectionReponse(data);
 						queueMessage(frame.buffer());
 						client.selector.wakeup();
@@ -124,8 +119,8 @@ public class ChatChaton {
 			
 			when(Data.DataPrivateConnectionReponse.class, d -> {
 				if (d.state()==0) {
-					logger.info(d.login()+" accepted the demand");
-					var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)5, d.login(), client.clientPort, "localhost", System.currentTimeMillis());
+					logger.info(d.secondClient()+" accepted the demand");
+					var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)5, d.firstClient(), d.secondClient(), client.clientPort, "localhost", System.currentTimeMillis());
 					Frame frame = Frame.createFramePrivateConnectionAccepted(data);
 					queueMessage(frame.buffer());
 					client.selector.wakeup();
@@ -133,13 +128,13 @@ public class ChatChaton {
 					client.lock.lock();
 					try {
 						client.state = State.NONE;
-						client.privateConnexion = d.login();
+						client.privateConnexion = d.secondClient();
 					} finally {
 						client.lock.unlock();
 					}
 					return frame;	
 				} else {
-					logger.info(d.login()+" denied the demand");
+					logger.info(d.secondClient()+" denied the demand");
 					var data = Data.createDataError(StandardOperation.ERROR, StandardOperation.PRIVATE_CONNEXION);
 					Frame frame = Frame.createFrameError(data);
 					queueMessage(frame.buffer());
@@ -147,15 +142,16 @@ public class ChatChaton {
 					return frame;}}).
 			
 			when(Data.DataPrivateConnectionAccepted.class, d -> {
+				logger.info("Client "+d.secondClient()+ " with the token "+d.token());
 				SocketAddress sa = new InetSocketAddress(d.host(), d.port());
-				
 				try {
+				
 					SocketChannel sc = SocketChannel.open();
 					sc.configureBlocking(false);
 					sc.connect(sa);
 					var key = sc.register(client.selector, SelectionKey.OP_CONNECT);
 					Context context = new Context(client, key);
-					client.map.put(d.login(), context);
+					client.map.put(d.secondClient(), context);
 					client.state = State.NONE;
 					//client.privateConnexion = d.login();
 					key.attach(context);
@@ -405,8 +401,10 @@ public class ChatChaton {
 	private void sendingReponse(String log) {
 		state = State.SENDING_REPONSE;
 		Context context = (Context) uniqueKey.attachment();
-		Data data = Data.createDataPrivateConnectionRequested(StandardOperation.PRIVATE_CONNEXION, (byte)1, log);
-		context.fv.call(data);
+		var data = Data.createDataPrivateConnectionRequested(StandardOperation.PRIVATE_CONNEXION, (byte)1, login, log);
+		Frame frame = Frame.createFramePrivateConnectionRequested(data);
+		context.queueMessage(frame.buffer());
+		selector.wakeup();
 	}
 	
 	private Frame createFileFrame(String login, String fileName) throws IOException {

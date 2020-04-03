@@ -17,9 +17,11 @@ class FramePrivateConnectionReponse implements Frame {
 
 	@Override
 	public ByteBuffer buffer() {
-		ByteBuffer requested = new FramePrivateConnectionRequested(data.dataPrivateConnectionRequested).buffer();
-		ByteBuffer bb = ByteBuffer.allocate(requested.remaining()+Byte.BYTES);
-		bb.put(requested);
+		ByteBuffer firstClient = new FrameText(data.firstClient).buffer();
+		ByteBuffer secondClient = new FrameText(data.secondClient).buffer();
+		ByteBuffer bb = ByteBuffer.allocate(3*Byte.BYTES + firstClient.remaining() + secondClient.remaining());
+		bb.put(data.opcode.opcode()).put(data.step);
+		bb.put(firstClient).put(secondClient);
 		bb.put(data.state);
 		bb.flip();
 		return bb;
