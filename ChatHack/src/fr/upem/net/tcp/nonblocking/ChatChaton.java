@@ -3,6 +3,7 @@ package fr.upem.net.tcp.nonblocking;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
@@ -120,7 +121,9 @@ public class ChatChaton {
 			when(Data.DataPrivateConnectionReponse.class, d -> {
 				if (d.state()==0) {
 					logger.info(d.secondClient()+" accepted the demand");
-					var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)5, d.firstClient(), d.secondClient(), client.clientPort, "localhost", System.currentTimeMillis());
+					var data = Data.createDataPrivateConnectionAccepted(StandardOperation.PRIVATE_CONNEXION, (byte)5, d.firstClient(), d.secondClient(), 
+							client.serverSocketChannel.socket().getLocalPort(), client.serverSocketChannel.socket().getInetAddress().getHostName(),
+							System.currentTimeMillis());
 					Frame frame = Frame.createFramePrivateConnectionAccepted(data);
 					queueMessage(frame.buffer());
 					client.selector.wakeup();
@@ -153,11 +156,8 @@ public class ChatChaton {
 					Context context = new Context(client, key);
 					client.map.put(d.secondClient(), context);
 					client.state = State.NONE;
-					//client.privateConnexion = d.login();
 					key.attach(context);
-					//var data = Data.createDataPrivateConnectionConnect(StandardOperation.PRIVATE_CONNEXION, (byte)7, d.login(), d.token());
-					//Frame frame = Frame.createFramePrivateConnectionConnect(data);
-					//context.queueMessage(frame.buffer());
+		
 				} catch (IOException e) { }
 				
 				return null;}).
@@ -333,21 +333,27 @@ public class ChatChaton {
 	private Map<String, Context> map = new HashMap<>();
 	private final ServerSocketChannel serverSocketChannel;
 	private final Path path;
-	private final int clientPort;
 	
 	
-	public ChatChaton(Path path, int clientPort, String hostname, int port, String login, Optional<String> password) throws IOException {
+	public ChatChaton(Path path, String hostname, int port, String login, Optional<String> password) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		selector = Selector.open();
 		sc = SocketChannel.open();
 		serverAdress = new InetSocketAddress(hostname, port);
-		serverSocketChannel.bind(new InetSocketAddress(clientPort));
+		serverSocketChannel.bind(new InetSocketAddress(getFreePort()));
+		
 		this.login = login;
 		this.password = password;
 		this.path = path;
-		this.clientPort = clientPort;
 	}
-
+	
+	private int getFreePort() throws IOException {
+		try (ServerSocket socket = new ServerSocket(0)) {
+			socket.setReuseAddress(true);
+			return socket.getLocalPort();
+		}
+	}
+	
 	private void sendPublicConnectionRequest() throws InterruptedException {
 		Context context = (Context) uniqueKey.attachment();
 		if (context == null) {
@@ -534,21 +540,20 @@ public class ChatChaton {
 	}
 
 	public static void main(String[] args) throws NumberFormatException, IOException {
-		if (args.length != 5 && args.length != 6) {
+		if (args.length != 4 && args.length != 5) {
 			usage();
 			return;
 		}
 		
 		Path path = Path.of(args[0]);
-		int port = Integer.parseInt(args[1]);
-		String host = args[2];
-		int ip = Integer.parseInt(args[3]);
-		String login = args[4];
+		String host = args[1];
+		int ip = Integer.parseInt(args[2]);
+		String login = args[3];
 		Optional<String> password = Optional.empty();
-		if (args.length == 6) {
-			password = Optional.of(args[5]);
+		if (args.length == 5) {
+			password = Optional.of(args[4]);
 		}
-		new ChatChaton(path, port, host, ip, login, password).launch();
+		new ChatChaton(path, host, ip, login, password).launch();
 	}
 
 }

@@ -153,6 +153,7 @@ public class ServerChatHack {
 						return frame;}).
 					
 					when(Data.DataPrivateConnectionReponse.class, d -> {
+						logger.info("------------ Received ------------"+d.state());
 						SelectionKey requestKey = server.loginMap.get(d.secondClient());
 						if (requestKey == null || !requestKey.isValid() || requestKey.attachment() == null) {
 							 SelectionKey senderKey = server.loginMap.get(d.firstClient());
