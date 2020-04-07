@@ -7,6 +7,7 @@ import fr.upem.net.tcp.frame.Data.DataAck;
 import fr.upem.net.tcp.frame.Data.DataConnectionClient;
 import fr.upem.net.tcp.frame.Data.DataConnectionServerMdp;
 import fr.upem.net.tcp.frame.Data.DataConnectionServerMdpReponse;
+import fr.upem.net.tcp.frame.Data.DataDeconnexion;
 import fr.upem.net.tcp.frame.Data.DataError;
 import fr.upem.net.tcp.frame.Data.DataGlobalClient;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionAccepted;
@@ -129,8 +130,23 @@ public interface Frame {
 		return new FramePrivateFile(data);
 	}
 	
+	/**
+	 * Creates a FrameAck.
+	 * @param data a {@link DataAck}.
+	 * @return FrameAck.
+	 */
 	static Frame createFrameAck(DataAck data) {
 		Objects.requireNonNull(data);
 		return new FrameAck(data);
+	}
+	
+	/**
+	 * Creates a FrameDeconnexion.
+	 * @param data a {@link DataDeconnexion}.
+	 * @return FrameDeconnexion.
+	 */
+	static Frame createFrameDeconnexion(DataDeconnexion data) {
+		Objects.requireNonNull(data);
+		return new FrameDeconnexion(data);
 	}
 }

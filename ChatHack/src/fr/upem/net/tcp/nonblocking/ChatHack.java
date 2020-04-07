@@ -57,6 +57,28 @@ public class ChatHack {
 			}
 
 		}
+		
+		private void privateMessageOrFile(String action, ChatHack client) throws IOException {
+			firstPrivateMessage = action;
+			String[] s = action.split(" ", 2);
+			String log = s[0].substring(1);
+			if (map.containsKey(log) && !map.get(log).isValid()) {
+				map.remove(log);
+			}
+			if (log.equals(client.login)) {
+				logger.info("Cannot create private connexion with yourself");
+			}
+			else if (!map.containsKey(log)) {
+				state = State.SENDING_REPONSE;
+				client.sendPrivateConnectionRequest(log);
+			} else {
+				String text = "";
+				if (s.length == 2) {
+					text = s[1];
+					sendingMessageOrFile(client, action, log, text);
+				}
+			} 
+		}
 
 		public void treat(ChatHack client) throws IOException {
 			if (state == State.WAITING_PUBLIC_CONNECTION) {
@@ -67,26 +89,21 @@ public class ChatHack {
 			if (action == null) {
 				return;
 			}
-			if (action.startsWith("@") || action.startsWith("/")) {
-				firstPrivateMessage = action;
+			if (action.startsWith("^Z") || action.startsWith("^z")) {
 				String[] s = action.split(" ", 2);
-				String log = s[0].substring(1);
-				if (map.containsKey(log) && !map.get(log).isValid()) {
-					map.remove(log);
-				}
-				if (log.equals(client.login)) {
-					logger.info("Cannot create private connexion with yourself");
-				}
-				else if (!map.containsKey(log)) {
-					state = State.SENDING_REPONSE;
-					client.sendPrivateConnectionRequest(log);
-				} else {
-					String text = "";
-					if (s.length == 2) {
-						text = s[1];
+				if (s.length == 2) {
+					if (!map.containsKey(s[1]) || !map.get(s[1]).isValid()) {
+						return;
 					}
-					sendingMessageOrFile(client, action, log, text);
-				} 
+					logger.info("Deconneted to client "+s[1]);
+					client.sendDeconnexionRequest(map.get(s[1]), client.login);
+					map.remove(s[1]);
+				} else {
+					client.sendDeconnexionRequest(client.uniqueKey, client.login);
+				}
+			}
+			else if (action.startsWith("@") || action.startsWith("/")) {
+				privateMessageOrFile(action, client);
 			} else {
 				if (state == State.NONE)
 					client.sendGlobalMessage(action);
@@ -192,16 +209,18 @@ public class ChatHack {
 			FrameVisitor fv = new FrameVisitor().
 
 			when(Data.DataAck.class, d -> {
+				try {
 				switch (d.request()) {
 					case CONNEXION:
-						try {
-							logger.info("Connected to: " + client.sc.getRemoteAddress());
-						} catch (IOException e) { }
+						logger.info("Connected to: " + client.sc.getRemoteAddress());
 						break;
-
+					case DECONNEXION:
+						logger.info("Deconnexion to server: "+ client.sc.getRemoteAddress());
+						break;
 					default:
 						throw new AssertionError();
 					}
+				} catch (IOException e) {}
 					return null;}).
 
 			when(Data.DataError.class, d -> {
@@ -299,7 +318,11 @@ public class ChatHack {
 					
 				}
 				Frame frame = Frame.createFramePrivateFile(d);
-				return frame;
+				return frame;}).
+			when(Data.DataDeconnexion.class, d -> {
+				client.action.map.remove(d.login());
+				logger.info("Deconnected to "+d.login());
+				return null;
 			});
 
 			return new Context(client, selectionKey, fv);
@@ -517,12 +540,22 @@ public class ChatHack {
 		context.queueMessage(frame.buffer());
 	}
 	
+	private void sendDeconnexionRequest(SelectionKey key, String login) {
+		if (key.attachment() == null) {
+			return;
+		}
+		Context context = (Context)key.attachment();
+		var data = Data.createDataDeconnexion(StandardOperation.DECONNEXION, login);
+		Frame frame = Frame.createFrameDeconnexion(data);
+	
+		context.queueMessage(frame.buffer());
+	}
+	
 	
 
 	public void launch() throws IOException, InterruptedException {
 		Thread thread = new Thread(() -> {
 			try {
-				//sendPublicConnectionRequest();
 				sendAction();
 			} catch (InterruptedException e) {
 				

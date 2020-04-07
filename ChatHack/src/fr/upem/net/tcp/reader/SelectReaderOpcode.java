@@ -8,6 +8,7 @@ import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 import fr.upem.net.tcp.reader.frames.FrameMdpReader;
 import fr.upem.net.tcp.reader.frames.FrameAckReader;
+import fr.upem.net.tcp.reader.frames.FrameDeconnexionReader;
 import fr.upem.net.tcp.reader.frames.FrameErrorReader;
 import fr.upem.net.tcp.reader.frames.FrameGlobal;
 import fr.upem.net.tcp.reader.frames.FramePrivateConnectionReader;
@@ -42,6 +43,7 @@ public class SelectReaderOpcode implements Reader<Data> {
 		map.put(StandardOperation.PRIVATE_MESSAGE.opcode(), new FramePrivateMessageReader(bb));
 		map.put(StandardOperation.PRIVATE_FILE.opcode(), new FramePrivateFileReader(bb));
 		map.put(StandardOperation.ACK.opcode(), new FrameAckReader(bb));
+		map.put(StandardOperation.DECONNEXION.opcode(), new FrameDeconnexionReader(bb));
 		map.put((byte)1, new FrameMdpReader(bb, (byte)1));
 		map.put((byte)0, new FrameMdpReader(bb, (byte)0));
 		return new SelectReaderOpcode(bb, map);

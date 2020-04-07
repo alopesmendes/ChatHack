@@ -98,7 +98,7 @@ public class ServerChatHack {
 								} else {
 									
 									((Context)k.attachment()).queueMessage(errorFrame(StandardOperation.CONNEXION));
-									((Context)k.attachment()).silentlyClose();
+									((Context)k.attachment()).closed = true;
 								}
 							} catch (ClosedChannelException e) {
 								return null;
@@ -116,7 +116,7 @@ public class ServerChatHack {
 					when(Data.DataConnectionClient.class, d -> {
 						if (server.loginMap.containsKey(d.login()) && server.loginMap.get(d.login()).isValid()) {
 							((Context)key.attachment()).queueMessage(errorFrame(StandardOperation.CONNEXION));
-							((Context)key.attachment()).silentlyClose();
+							((Context)key.attachment()).closed = true;
 							return null;
 						}
 						server.loginMap.put(d.login(), key);
@@ -153,7 +153,6 @@ public class ServerChatHack {
 						return frame;}).
 					
 					when(Data.DataPrivateConnectionReponse.class, d -> {
-						logger.info("------------ Received ------------"+d.state());
 						SelectionKey requestKey = server.loginMap.get(d.secondClient());
 						if (requestKey == null || !requestKey.isValid() || requestKey.attachment() == null) {
 							 SelectionKey senderKey = server.loginMap.get(d.firstClient());
@@ -190,7 +189,19 @@ public class ServerChatHack {
 						
 						Frame frame = Frame.createFramePrivateConnectionAccepted(data);
 						context.queueMessage(frame);
-						return frame;});
+						return frame;}).
+					when(Data.DataDeconnexion.class, d -> {
+						if (key.attachment() == null) {
+							return null;
+						}
+						logger.info("Client deconnected: " + key);
+						Context context = (Context)key.attachment();
+						var data = Data.createDataAck(StandardOperation.ACK, StandardOperation.DECONNEXION);
+						Frame frame = Frame.createFrameAck(data);
+						context.queueMessage(frame);
+						context.closed = true;
+						return null;
+					});
 			return new Context(server, key, fv);
 		}
 

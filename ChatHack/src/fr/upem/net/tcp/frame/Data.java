@@ -517,6 +517,34 @@ public interface Data {
 		}
 	}
 	
+	static class DataDeconnexion implements Data {
+		final StandardOperation opcode;
+		final DataText login;
+		
+		private DataDeconnexion(StandardOperation opcode, DataText login) {
+			this.opcode = opcode;
+			this.login = login;
+		}
+		
+		@Override
+		public int hashCode() {	
+			return opcode.hashCode() ^ login.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataDeconnexion)) {
+				return false;
+			}
+			DataDeconnexion d = (DataDeconnexion)obj;
+			return d.opcode==opcode && d.login.equals(login);
+		}
+		
+		public String login() {
+			return login.text;
+		}
+	}
+	
 	/**
 	 * Creates a DataText.
 	 * @param text a {@link String}.
@@ -686,7 +714,24 @@ public interface Data {
 		return new DataPrivateFile(opcode, loginData, fileNameData, fileBuffer);
 	}
 	
+	/**
+	 * Creates a DataAck.
+	 * @param opcode a {@link StandardOperation}.
+	 * @param requestCode a {@link StandardOperation}.
+	 * @return DataAck.
+	 */
 	static DataAck createDataAck(StandardOperation opcode, StandardOperation requestCode) {
 		return new DataAck(opcode, requestCode);
+	}
+	
+	/**
+	 * Creates a DataDeconnexion.
+	 * @param opcode a {@link StandardOperation}.
+	 * @return DataDeconnexion.
+	 */
+	static DataDeconnexion createDataDeconnexion(StandardOperation opcode, String login) {
+		Objects.requireNonNull(login);
+		DataText loginData = new DataText(login);
+		return new DataDeconnexion(opcode, loginData);
 	}
 }
