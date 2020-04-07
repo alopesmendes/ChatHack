@@ -44,6 +44,7 @@ public class ChatHack {
 		private final Condition condition = lock.newCondition();
 		private State state = State.WAITING_PUBLIC_CONNECTION;
 		private String privateConnexion;
+		private String firstPrivateMessage;
 		
 		
 		public void setPrivateConnexion(String privateConnexion) {
@@ -67,13 +68,23 @@ public class ChatHack {
 				return;
 			}
 			if (action.startsWith("@") || action.startsWith("/")) {
+				firstPrivateMessage = action;
 				String[] s = action.split(" ", 2);
 				String log = s[0].substring(1);
-				if (!map.containsKey(log)) {
+				if (map.containsKey(log) && !map.get(log).isValid()) {
+					map.remove(log);
+				}
+				if (log.equals(client.login)) {
+					logger.info("Cannot create private connexion with yourself");
+				}
+				else if (!map.containsKey(log)) {
 					state = State.SENDING_REPONSE;
 					client.sendPrivateConnectionRequest(log);
 				} else {
-					String text = s[1];
+					String text = "";
+					if (s.length == 2) {
+						text = s[1];
+					}
 					sendingMessageOrFile(client, action, log, text);
 				} 
 			} else {
@@ -508,7 +519,7 @@ public class ChatHack {
 	
 	
 
-	public void launch() throws IOException {
+	public void launch() throws IOException, InterruptedException {
 		Thread thread = new Thread(() -> {
 			try {
 				//sendPublicConnectionRequest();
@@ -533,7 +544,7 @@ public class ChatHack {
 		}
 	}
 
-	private void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException {
+	private void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException, InterruptedException {
 		for (SelectionKey key : selectedKeys) {
 			if (key.isValid() && key.isAcceptable()) {
 				doAccept(key);
@@ -550,13 +561,14 @@ public class ChatHack {
 		}
 	}
 
-	private void doAccept(SelectionKey selectionKey) throws IOException {
+	private void doAccept(SelectionKey selectionKey) throws IOException, InterruptedException {
 		SocketChannel sc = serverSocketChannel.accept();
 		if (sc != null) {
 			sc.configureBlocking(false);
 			SelectionKey clientKey = sc.register(selector, SelectionKey.OP_READ);
 			clientKey.attach(Context.createPrivateClient(this, clientKey));
 			action.put(action.privateConnexion, clientKey);
+			action.actions.put(action.firstPrivateMessage);
 		}
 	}
 
@@ -564,7 +576,7 @@ public class ChatHack {
 		System.out.println("Usage : ChatHack path, host, port, login and maybe password");
 	}
 
-	public static void main(String[] args) throws NumberFormatException, IOException {
+	public static void main(String[] args) throws NumberFormatException, IOException, InterruptedException {
 		if (args.length != 4 && args.length != 5) {
 			usage();
 			return;
