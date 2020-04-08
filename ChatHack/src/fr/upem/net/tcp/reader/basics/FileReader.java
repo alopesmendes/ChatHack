@@ -28,31 +28,23 @@ public class FileReader implements Reader<ByteBuffer>{
 		try {
 			switch (state) {
 			case WAITING_SIZE:
-				if (!bb.hasRemaining()) {
-					return ProcessStatus.ERROR;
-				}
+				
 				
 				if (bb.remaining() < Integer.BYTES) {
 					return ProcessStatus.REFILL;
 				}
 				size = bb.getInt();
-				if (size <= 0 || size > 1_024) {
+				if (size <= 0) {
 					return ProcessStatus.ERROR;
 				}
 				state = State.WAITING_BUFFER;
+				buffer = ByteBuffer.allocate(size);
 			case WAITING_BUFFER:
-				if (!bb.hasRemaining()) {
-					return ProcessStatus.ERROR;
+				ProcessStatus processTransfer = transferBytes(bb, buffer);
+				if (processTransfer != ProcessStatus.DONE) {
+					return processTransfer;
 				}
-				if (bb.remaining() < size) {
-					return ProcessStatus.REFILL;
-				}
-				int fLimit = bb.limit();
-				bb.limit(bb.position()+size);
-				buffer = ByteBuffer.allocate(bb.remaining());
-				buffer.put(bb);
 				buffer.flip();
-				bb.limit(fLimit);
 				state = State.DONE;
 				return ProcessStatus.DONE;
 
@@ -62,7 +54,13 @@ public class FileReader implements Reader<ByteBuffer>{
 		} finally {
 			bb.compact();
 		}
-
+	}
+	
+	private ProcessStatus transferBytes(ByteBuffer src, ByteBuffer dst) {
+		while (src.hasRemaining() && dst.hasRemaining()) {
+			dst.put(src.get());
+		}
+		return dst.hasRemaining() ? ProcessStatus.REFILL : ProcessStatus.DONE;
 	}
 
 	@Override

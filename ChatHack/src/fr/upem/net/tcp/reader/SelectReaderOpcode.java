@@ -67,6 +67,7 @@ public class SelectReaderOpcode implements Reader<Data> {
 				}
 				Byte b = byteReader.get();
 				byteReader.reset();
+				state = State.WAITING_READER;
 				reader = map.computeIfAbsent(b, by -> exception(b));
 			case WAITING_READER:
 				ps = reader.process();

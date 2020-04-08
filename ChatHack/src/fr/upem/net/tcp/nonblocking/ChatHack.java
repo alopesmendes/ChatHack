@@ -335,22 +335,30 @@ public class ChatHack {
 		 * @param bb
 		 */
 		private void queueMessage(ByteBuffer bb) {
-			try {
-				queue.add(bb);
-				processOut();
-				updateInterestOps();
-			} finally {
-				bb.flip();
-			}
+			
+			queue.add(bb);
+			processOut();
+			updateInterestOps();
+			
 		}
-
+		
+		private void transferBytes(ByteBuffer src, ByteBuffer dst) {
+			while (src.hasRemaining() && dst.hasRemaining()) {
+				dst.put(src.get());
+			}
+		} 
+		
 		/**
 		 * Try to fill bbout from the message queue
 		 *
 		 */
 		private void processOut() {
-			while (!queue.isEmpty() && bbout.remaining() >= queue.peek().remaining()) {
-				bbout.put(queue.poll());
+			while (!queue.isEmpty() && bbout.hasRemaining()) {
+				transferBytes(queue.peek(), bbout); 
+				if (!queue.peek().hasRemaining()) {
+					queue.poll();
+				}
+				//bbout.put(queue.poll());
 			}
 		}
 
@@ -393,6 +401,7 @@ public class ChatHack {
 		 * @throws IOException
 		 */
 		private void doRead() throws IOException {
+			
 			if (socketChannel.read(bbin) == -1) {
 				closed = true;
 			}
@@ -443,7 +452,6 @@ public class ChatHack {
 				silentlyClose();
 			} else {
 				selectionKey.interestOps(ops);
-
 			}
 		}
 
