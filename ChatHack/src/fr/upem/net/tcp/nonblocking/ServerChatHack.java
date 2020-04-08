@@ -250,14 +250,24 @@ public class ServerChatHack {
 			processOut();
 			updateInterestOps();
 		}
-
+		
+		
+		private void transferBytes(ByteBuffer src, ByteBuffer dst) {
+			while (src.hasRemaining() && dst.hasRemaining()) {
+				dst.put(src.get());
+			}
+		} 
+		
 		/**
 		 * Try to fill bbout from the message queue
 		 *
 		 */
 		private void processOut() {
-			while (!queue.isEmpty() && bbout.remaining() >= queue.peek().remaining()) {
-				bbout.put(queue.poll());
+			while (!queue.isEmpty() && bbout.hasRemaining()) {
+				transferBytes(queue.peek(), bbout); 
+				if (!queue.peek().hasRemaining()) {
+					queue.poll();
+				}
 			}
 		}
 

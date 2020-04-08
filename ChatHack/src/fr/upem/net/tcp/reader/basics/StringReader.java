@@ -11,6 +11,7 @@ public class StringReader implements Reader<String>{
 	};
 
 	private ByteBuffer bb;
+	private ByteBuffer buffer;
 	private State state = State.WAITING_SIZE;
 	private int size;
 	private String text;
@@ -34,22 +35,19 @@ public class StringReader implements Reader<String>{
 					return ProcessStatus.REFILL;
 				}
 				size = bb.getInt();
-				if (size <= 0 || size > 1024) {
+				if (size <= 0) {
 					return ProcessStatus.ERROR;
 				}
+				buffer = ByteBuffer.allocate(size);
 				state = State.WAITING_MSG;
-
 			case WAITING_MSG:
-				if (!bb.hasRemaining()) {
-					return ProcessStatus.ERROR;
+				
+				ProcessStatus processTransfer = transferBytes(bb, buffer);
+				if (processTransfer != ProcessStatus.DONE) {
+					return processTransfer;
 				}
-				if (bb.remaining() < size) {
-					return ProcessStatus.REFILL;
-				}
-				int oldLimit = bb.limit();
-				bb.limit(bb.position() + size);
-				text = (StandardCharsets.UTF_8.decode(bb).toString());
-				bb.limit(oldLimit);
+				buffer.flip();
+				text = (StandardCharsets.UTF_8.decode(buffer).toString());
 				state = State.DONE;
 				return ProcessStatus.DONE;
 				
@@ -59,6 +57,13 @@ public class StringReader implements Reader<String>{
 		} finally {
 			bb.compact();
 		}
+	}
+	
+	private ProcessStatus transferBytes(ByteBuffer src, ByteBuffer dst) {
+		while (src.hasRemaining() && dst.hasRemaining()) {
+			dst.put(src.get());
+		}
+		return dst.hasRemaining() ? ProcessStatus.REFILL : ProcessStatus.DONE;
 	}
 
 	@Override
