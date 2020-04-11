@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets;
 
 import fr.upem.net.tcp.frame.Data.DataText;
 
-/* Erasable. */
 class FrameText implements Frame {
 	
 	private final DataText dataText;
