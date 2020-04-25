@@ -11,6 +11,7 @@ import fr.upem.net.tcp.frame.Data.DataConnectionServerMdpReponse;
 import fr.upem.net.tcp.frame.Data.DataDeconnexion;
 import fr.upem.net.tcp.frame.Data.DataError;
 import fr.upem.net.tcp.frame.Data.DataGlobalClient;
+import fr.upem.net.tcp.frame.Data.DataPrivateAck;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionAccepted;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionReponse;
 import fr.upem.net.tcp.frame.Data.DataPrivateConnectionRequested;
@@ -253,6 +254,18 @@ public interface Frame {
 		};
 	}
 
+	static Frame createFramePrivateAck(DataPrivateAck data) {
+		Objects.requireNonNull(data);
+		ByteBuffer login = new FrameText(data.login).buffer();
+		return () -> {
+			ByteBuffer bb = ByteBuffer.allocate(2*Byte.BYTES + login.remaining());
+			bb.put(data.opcode.opcode()).put(data.requestCode.opcode());
+			bb.put(login);
+			login.flip();
+			return bb.flip();
+		};
+	}
+	
 	/**
 	 * Creates a FrameDeconnexion.
 	 * @param data a {@link DataDeconnexion}.
@@ -270,4 +283,7 @@ public interface Frame {
 			return bb.flip();
 		};
 	}
+	
+
+	
 }

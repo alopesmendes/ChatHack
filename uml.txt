@@ -4,6 +4,10 @@ package fr.upem.net.tcp.nonblocking {
     class ServerChatHack {
         +void launch()
     }
+    
+    class ChatChaton {
+        +void launch()
+    }
 }
 
 package fr.upem.net.tcp.reader {
@@ -11,29 +15,78 @@ package fr.upem.net.tcp.reader {
         DONE,REFILL,ERROR
     }
     
-    interface Reader {
+    interface Reader<T> {
         +ProcessStatus process()
-        +Frame get()
+        +T get()
         +void reset()
     }
     
-    ProcessStatus --> Reader
-    Reader --> ServerChatHack
+    class SelectOpcodeReader<Reader<Data>> {
+        +{static}Reader<Data> create(ByteBuffer bb)
+    }
     
-    note left of Reader : Will implemente mutiple readers
+    ProcessStatus -right-> Reader
+    Reader -down--> ServerChatHack
+    Reader -down--> ChatChaton
+    SelectOpcodeReader .down.|> Reader
+    
+    note left of SelectOpcodeReader : Will select the right reader to apply.
+    note right of Reader : Will implemente mutiple readers
 }
 
 package fr.upem.net.tcp.frame {
     interface Frame {
         +ByteBuffer buffer()
+        {static}+Frame createFrameGlobal(DataGlobal data)
+        {static}+Frame createFrameError(DataError data)
+        {static}+Frame createFrameConnection(DataConnectionClient data)
+        {static}+Frame createFrameConnectionMdp(DataConnectionServerMdp data)
+        {static}+Frame createFrameConnectMdpServer(DataConnectionServerMdpReponse data)
+        {static}+Frame createFramePrivateConnectionRequested(DataPrivateConnectionRequested data)
+        {static}+Frame createFramePrivateConnectionReponse(DataPrivateConnectionReponse data)
+        {static}+Frame createFramePrivateConnectionAccepted(DataPrivateConnectionAccepted data)
     }
     
-    class FrameVisitor<U, R> {
-        +<T extends U> FrameVisitor<U, R> when(Class<? extends T> type, Function<? super T, ? extends R> fun)
-        +R call(U receiver)
+    interface Data {
+        {static}+DT createDataText(String text)
+        {static}+DGS createDataGlobalServer(StandardOperation opcode, byte step, String pseudo, String message)
+        {static}+DGC createDataGlobalClient(StandardOperation opcode, byte step, String message)
+        {static}+DE createDataError(StandardOperation opcode, byte requestCode)
+        {static}+DCC createDataConnectionClient(StandardOperation opcode, byte connexion, String login, Optional<String> password)
+        {static}+DCSM createDataConnectionServerMdp(DataConnectionClient data)
+        {static}+DCSMR createDataConnectionServerMdpReponse(byte opcode, long id)
+        {static}+DPCReq createDataPrivateConnectionRequested(StandardOperation opcode, byte step, String login)
+        {static}+DPCA createDataPrivateConnectionAccepted(StandardOperation opcode, byte step, String login, int port, String socketAdress, long token)
+        {static}+DPCRep createDataPrivateConnectionReponse(StandardOperation opcode, byte step, String login, byte state)
+        {static}+DPCC createDataPrivateConnectionConnect(StandardOperation opcode, byte step, String login, long token)
     }
     
-    Frame --> Reader
+    
+    
+    class FrameVisitor {
+        +<T extends Data> FrameVisitor when(Class<? extends T> type, Function<? super T, ? extends Frame> fun)
+        +Frame call(Data receiver)
+    }
+    
+    enum StandardOperation {
+        CONNEXION,
+        GLOBAL_MESSAGE, 
+        PRIVATE_CONNEXION, 
+        PRIVATE_MESSAGE,
+        PRIVATE_FILE, 
+        DECONNEXION, 
+        ACK, 
+        ERROR
+    }
+    
+    Data ..> SelectOpcodeReader
+    Data .down.> FrameVisitor
+    Frame .right.> FrameVisitor
+    StandardOperation .right.> Data
+    FrameVisitor -down--> ServerChatHack
+    FrameVisitor -down--> ChatChaton
+    
+    note top of Data : Many individual datas.
 }
 
 @enduml

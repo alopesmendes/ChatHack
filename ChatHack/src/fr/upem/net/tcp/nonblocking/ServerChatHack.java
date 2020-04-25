@@ -46,9 +46,6 @@ public class ServerChatHack {
 			this.client = client;
 			this.mdp = mdp;
 		}
-		
-		
-
 
 	}
 
@@ -114,7 +111,10 @@ public class ServerChatHack {
 		private static Context contextClient(ServerChatHack server, SelectionKey key) {
 			FrameVisitor fv = new FrameVisitor().
 					when(Data.DataConnectionClient.class, d -> {
-						if (server.loginMap.containsKey(d.login()) && server.loginMap.get(d.login()).isValid()) {
+
+						if 	((!server.uniqueKey.isValid())
+							|| (server.loginMap.containsKey(d.login()) && server.loginMap.get(d.login()).isValid())) {
+							
 							((Context)key.attachment()).queueMessage(errorFrame(StandardOperation.CONNEXION));
 							((Context)key.attachment()).closed = true;
 							return null;
@@ -167,6 +167,7 @@ public class ServerChatHack {
 						Context context = (Context) requestKey.attachment();
 						var data = Data.createDataPrivateConnectionReponse(StandardOperation.PRIVATE_CONNEXION, (byte)4, d.secondClient(), d.firstClient(), d.state());
 						Frame frame = Frame.createFramePrivateConnectionReponse(data);
+						
 						context.queueMessage(frame);
 						return frame;}).
 					
@@ -200,11 +201,14 @@ public class ServerChatHack {
 						Frame frame = Frame.createFrameAck(data);
 						context.queueMessage(frame);
 						context.closed = true;
+						return null;}).
+					
+					when(Data.DataError.class, d -> {
 						return null;
-					});
+					})
+					;
 			return new Context(server, key, fv);
 		}
-
 
 		private static Frame errorFrame(StandardOperation requestCode) {
 			return Frame.createFrameError(Data.createDataError(StandardOperation.ERROR, requestCode));

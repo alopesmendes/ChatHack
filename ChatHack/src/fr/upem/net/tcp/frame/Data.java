@@ -100,6 +100,10 @@ public interface Data {
 			DataError d = (DataError)obj;
 			return d.opcode==opcode && d.requestCode==requestCode;
 		}
+		
+		public StandardOperation requestCode() {
+			return requestCode;
+		}
 	}
 	
 	static class DataPrivateConnectionBase implements Data {
@@ -194,51 +198,6 @@ public interface Data {
 		public long token() {
 			return token;
 		}
-	}
-
-	static class DataPrivateConnectionConnect implements Data {
-		final StandardOperation opcode;
-		final byte step;
-		final DataText login;
-		final long token;
-		
-		/**
-		 * Creates a DataPrivateConnectionConnect with it's opcode, step, login and token.
-		 * @param opcode a StandardOperation.
-		 * @param step a byte.
-		 * @param login a DataText.
-		 * @param token a long.
-		 */
-		private DataPrivateConnectionConnect(StandardOperation opcode, byte step, DataText login, long token) {
-			this.opcode = opcode;
-			this.step = step;
-			this.login = login;
-			this.token = token;
-		}
-		
-		@Override
-		public int hashCode() {
-			return Byte.hashCode(step) ^ Long.hashCode(token) ^ opcode.hashCode() ^ login.hashCode();
-		}
-		
-		@Override
-		public boolean equals(Object obj) {
-			if (!(obj instanceof DataPrivateConnectionConnect)) {
-				return false;
-			}
-			DataPrivateConnectionConnect d = (DataPrivateConnectionConnect)obj;
-			return d.opcode==opcode && d.step==step && token==d.token && login.equals(d.login);
-		}
-		
-		public String login() {
-			return login.text;
-		}
-		
-		public long token() {
-			return token;
-		}
-		
-		
 	}
 	
 	static class DataPrivateConnectionRejected implements Data {
@@ -517,6 +476,33 @@ public interface Data {
 		}
 	}
 	
+	static class DataPrivateAck extends DataAck {
+		final DataText login;
+		
+		private DataPrivateAck(StandardOperation opcode, StandardOperation requestCode, DataText login) {
+			super(opcode, requestCode);
+			this.login = login;
+		}
+		
+		@Override
+		public int hashCode() {
+			return super.hashCode() ^ login.hashCode();
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof DataPrivateAck)) {
+				return false;
+			}
+			DataPrivateAck d = (DataPrivateAck)obj;
+			return super.equals(obj) && d.login.equals(login);
+		}
+		
+		public String login() {
+			return login.text;
+		}
+	}
+	
 	static class DataDeconnexion implements Data {
 		final StandardOperation opcode;
 		final DataText login;
@@ -671,20 +657,6 @@ public interface Data {
 	}
 
 	/**
-	 * Creates a DataPrivateConnectionConnect.
-	 * @param opcode a {@link StandardOperation}.
-	 * @param step a {@link Byte}.
-	 * @param login a {@link String}.
-	 * @param token a {@link Long}.
-	 * @return DataPrivateConnectionConnect.
-	 */
-	static DataPrivateConnectionConnect createDataPrivateConnectionConnect(StandardOperation opcode, byte step, String login, long token) {
-		Objects.requireNonNull(login);
-		DataText loginData = new DataText(login);
-		return new DataPrivateConnectionConnect(opcode, step, loginData, token);
-	}
-
-	/**
 	 * Creates a DataPrivateConnectionClient.
 	 * @param opcode a {@link StandardOperation}
 	 * @param message a {@link String}
@@ -722,6 +694,12 @@ public interface Data {
 	 */
 	static DataAck createDataAck(StandardOperation opcode, StandardOperation requestCode) {
 		return new DataAck(opcode, requestCode);
+	}
+	
+	static DataPrivateAck createDataPrivateAck(StandardOperation opcode, StandardOperation requestCode, String login) {
+		Objects.requireNonNull(login);
+		DataText loginData = new DataText(login);
+		return new DataPrivateAck(opcode, requestCode, loginData);
 	}
 	
 	/**

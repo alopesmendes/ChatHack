@@ -30,23 +30,26 @@ public class FrameErrorReader implements Reader<Data> {
 	
 	@Override
 	public ProcessStatus process() {
+		if (state == State.DONE || state == State.ERROR) {
+			throw new IllegalStateException();
+		}
 		switch(state) {
-		case WAITING_OP_REQUEST:
-			ProcessStatus requestStatus = byteReader.process();
-			if (requestStatus != ProcessStatus.DONE) {
-				return requestStatus;
-			}
-			op_request = byteReader.get();
-			var op = StandardOperation.convert(op_request);
-			if (op.isEmpty()) {
-				return ProcessStatus.ERROR;
-			}
-			byteReader.reset();
-			state = State.DONE;
-			data = Data.createDataError(StandardOperation.ERROR, op.get());
-			return ProcessStatus.DONE;
-		default:
-			throw new AssertionError();
+			case WAITING_OP_REQUEST:
+				ProcessStatus requestStatus = byteReader.process();
+				if (requestStatus != ProcessStatus.DONE) {
+					return requestStatus;
+				}
+				op_request = byteReader.get();
+				var op = StandardOperation.convert(op_request);
+				if (op.isEmpty()) {
+					return ProcessStatus.ERROR;
+				}
+				byteReader.reset();
+				state = State.DONE;
+				data = Data.createDataError(StandardOperation.ERROR, op.get());
+				return ProcessStatus.DONE;
+			default:
+				throw new AssertionError();
 		}
 	}
 

@@ -34,16 +34,13 @@ public class FramePrivateConnectionReader implements Reader<Data> {
 		map.put((byte)4, new FramePrivateConnectionReponseReader((byte)4, bb));
 		map.put((byte)5, new FramePrivateConnectionAcceptedReader((byte)5, bb));
 		map.put((byte)6, new FramePrivateConnectionAcceptedReader((byte)6, bb));
-		map.put((byte)7, new FramePrivateConnectionConnectReader((byte)7, bb));
 		return new FramePrivateConnectionReader(bb, map);
 	}
-	
-	
 	
 	@Override
 	public ProcessStatus process() {
 		if (state == State.DONE || state == State.ERROR) {
-			throw new IllegalArgumentException();
+			throw new IllegalStateException();
 		}
 		switch (state) {
 			case WAITING_STEP:
@@ -66,7 +63,7 @@ public class FramePrivateConnectionReader implements Reader<Data> {
 				return ProcessStatus.DONE;
 	
 			default:
-				throw new IllegalArgumentException("Unexpected value: " + state);
+				throw new AssertionError("Unexpected value: " + state);
 		}
 	}
 

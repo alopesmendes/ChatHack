@@ -22,6 +22,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import fr.upem.net.tcp.frame.Data;
@@ -45,6 +46,7 @@ public class ChatHack {
 		private State state = State.WAITING_PUBLIC_CONNECTION;
 		private String privateConnexion;
 		private String firstPrivateMessage;
+		private boolean isDone = false;
 		
 		
 		public void setPrivateConnexion(String privateConnexion) {
@@ -80,13 +82,21 @@ public class ChatHack {
 			} 
 		}
 
-		public void treat(ChatHack client) throws IOException {
+		public void treat(ChatHack client) throws IOException, InterruptedException {
+			if (!client.uniqueKey.isValid()) {
+				logger.log(Level.SEVERE, "server is closed");
+				end(client);	
+			}
 			if (state == State.WAITING_PUBLIC_CONNECTION) {
 				client.sendPublicConnectionRequest();
 				state = State.NONE;
 			}
 			var action = actions.poll();
 			if (action == null) {
+				return;
+			}
+			if (state == State.DONE) {
+				state = State.NONE;
 				return;
 			}
 			if (action.startsWith("^Z") || action.startsWith("^z")) {
@@ -183,6 +193,36 @@ public class ChatHack {
 				lock.unlock();
 			}
 		}
+
+		/**
+		 * @return the isDone
+		 */
+		public boolean isDone(ChatHack client) {
+			lock.lock();
+			try {
+				if (isDone) {
+					client.selector.wakeup();
+				}
+				return isDone;
+			} finally {
+				lock.unlock();
+			}
+		}
+
+		/**
+		 * @param isDone the isDone to set
+		 * @throws IOException 
+		 */
+		public void end(ChatHack client) throws IOException {
+			lock.lock();
+			try {
+				this.isDone = true;
+				client.thread.interrupt();
+				client.serverSocketChannel.close();
+			} finally {
+				lock.unlock();
+			}
+		}
 		
 	}
 	
@@ -210,21 +250,37 @@ public class ChatHack {
 
 			when(Data.DataAck.class, d -> {
 				try {
-				switch (d.request()) {
-					case CONNEXION:
-						logger.info("Connected to: " + client.sc.getRemoteAddress());
-						break;
-					case DECONNEXION:
-						logger.info("Deconnexion to server: "+ client.sc.getRemoteAddress());
-						break;
-					default:
-						throw new AssertionError();
+					switch (d.request()) {
+						case CONNEXION:
+							logger.info("Connected to: " + client.sc.getRemoteAddress());
+							break;
+						case DECONNEXION:
+							logger.info("Deconnexion to server: "+ client.sc.getRemoteAddress());
+							client.action.end(client);
+							break;
+						default:
+							throw new AssertionError();
 					}
-				} catch (IOException e) {}
-					return null;}).
+				} catch (IOException e) { }
+				return null;}).
 
 			when(Data.DataError.class, d -> {
-				logger.info("Error detected");
+				
+				try {
+					switch (d.requestCode()) {
+						case CONNEXION:
+							logger.info("Connection failed");
+							client.action.end(client);
+							break;
+						case PRIVATE_CONNEXION:
+							logger.info("failed private connexion demand ");
+							client.action.state = State.NONE;
+							break;
+						default:
+							throw new AssertionError("Unexpected value: " + d.requestCode());
+					}
+				} catch (IOException e) { }
+				
 				return null;}).
 			
 			when(Data.DataGlobalClient.class, d -> {
@@ -232,6 +288,7 @@ public class ChatHack {
 				return null;}).
 			when(Data.DataPrivateConnectionRequested.class, d -> {
 				if (selectionKey.attachment() == null) {
+					client.action.state = State.DONE;
 					return null;
 				}
 				Frame frame = null;
@@ -245,6 +302,7 @@ public class ChatHack {
 						return null;
 					}
 					context.queueMessage(frame.buffer());
+					client.action.state = State.DONE;
 				} catch (InterruptedException e) {
 					
 				}
@@ -269,9 +327,7 @@ public class ChatHack {
 					
 				} else {
 					logger.info(d.secondClient()+" denied the demand");
-					var data = Data.createDataError(StandardOperation.ERROR, StandardOperation.PRIVATE_CONNEXION);
-					Frame frame = Frame.createFrameError(data);
-					context.queueMessage(frame.buffer());
+					client.action.state = State.NONE;
 				}
 				return null;}).
 			
@@ -300,6 +356,13 @@ public class ChatHack {
 			
 			when(Data.DataPrivateMessage.class, d -> {
 				System.out.println("private message from "+d.login()+" : "+d.message());
+				SelectionKey k = client.action.map.get(d.login());
+				if (k == null || k.attachment() == null) {
+					return null;
+				}
+				var data = Data.createDataPrivateAck(StandardOperation.ACK, StandardOperation.PRIVATE_MESSAGE, client.login);
+				Frame frame = Frame.createFramePrivateAck(data);
+				((Context) k.attachment()).queueMessage(frame.buffer());
 				return null;}).
 			
 			when(Data.DataPrivateFile.class, d -> {
@@ -313,15 +376,34 @@ public class ChatHack {
 							break;
 						}
 					}
-					logger.info("Received file "+d.fileName());
-				} catch (IOException e) {
-					
+					logger.info("Received file "+d.fileName()+" from "+d.login());
+				} catch (IOException e) { }
+				SelectionKey k = client.action.map.get(d.login());
+				if (k == null || k.attachment() == null) {
+					return null;
 				}
-				Frame frame = Frame.createFramePrivateFile(d);
+				var data = Data.createDataPrivateAck(StandardOperation.ACK, StandardOperation.PRIVATE_FILE, client.login);
+				Frame frame = Frame.createFramePrivateAck(data);
+				((Context) k.attachment()).queueMessage(frame.buffer());
 				return frame;}).
+			
 			when(Data.DataDeconnexion.class, d -> {
 				client.action.map.remove(d.login());
 				logger.info("Deconnected to "+d.login());
+				return null;
+			}).
+			
+			when(Data.DataPrivateAck.class, d -> {
+				switch (d.request()) {
+					case PRIVATE_FILE:
+						System.out.println(d.login() + " received the file");
+						break;
+					case PRIVATE_MESSAGE:
+						System.out.println(d.login() + " read the message");
+						break;
+					default:
+						throw new IllegalArgumentException("Unexpected value: " + d);
+				}
 				return null;
 			});
 
@@ -458,6 +540,7 @@ public class ChatHack {
 		private void silentlyClose() {
 			try {
 				socketChannel.close();
+				
 			} catch (IOException e) {
 				// ignore exception
 			}
@@ -475,6 +558,7 @@ public class ChatHack {
 	private final String login;
 	private final Optional<String> password;
 	private final Action action;
+	private Thread thread;
 	
 
 	public ChatHack(Path path, int clientPort, String host, int port, String login, Optional<String> password) throws IOException {
@@ -505,7 +589,7 @@ public class ChatHack {
 	}
 
 	private void sendAction() throws InterruptedException {
-		while (!Thread.interrupted()) {
+		while (!Thread.interrupted() && !action.isDone(this)) {
 			try (Scanner scanner = new Scanner(System.in)) {
 				while (scanner.hasNextLine()) {
 					String message = scanner.nextLine();
@@ -562,7 +646,7 @@ public class ChatHack {
 	
 
 	public void launch() throws IOException, InterruptedException {
-		Thread thread = new Thread(() -> {
+		thread = new Thread(() -> {
 			try {
 				sendAction();
 			} catch (InterruptedException e) {
@@ -577,7 +661,7 @@ public class ChatHack {
 		uniqueKey.attach(Context.createPublicClient(this, uniqueKey));
 		Set<SelectionKey> selectedKeys = selector.selectedKeys();
 		thread.start();
-		while (!Thread.interrupted()) {
+		while (!Thread.interrupted() && !action.isDone(this)) {
 			selector.select();
 			processSelectedKeys(selectedKeys);
 			action.treat(this);
@@ -599,6 +683,7 @@ public class ChatHack {
 			if (key.isValid() && key.isReadable()) {
 				((Context)key.attachment()).doRead();
 			}
+			
 		}
 	}
 
