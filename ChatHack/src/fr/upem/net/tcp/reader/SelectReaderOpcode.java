@@ -56,7 +56,7 @@ public class SelectReaderOpcode implements Reader<Data> {
 	@Override
 	public ProcessStatus process() {
 		if (state == State.DONE || state == State.ERROR) {
-			throw new IllegalArgumentException("state = Done or Error");
+			throw new IllegalStateException("state = Done or Error");
 		}
 		ProcessStatus ps;
 		switch(state) {
@@ -86,7 +86,7 @@ public class SelectReaderOpcode implements Reader<Data> {
 	@Override
 	public Data get() {
 		if (state != State.DONE) {
-			throw new AssertionError();
+			throw new IllegalStateException();
 		}
 		return data;
 	}

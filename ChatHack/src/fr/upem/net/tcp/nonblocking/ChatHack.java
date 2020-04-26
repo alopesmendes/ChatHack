@@ -455,20 +455,24 @@ public class ChatHack {
 		 */
 		private void processIn() throws IOException {
 			for (;;) {
-				Reader.ProcessStatus status = reader.process();
-				switch (status) {
-				case DONE:
-					Data frame = reader.get();
-					fv.call(frame);
-					reader.reset();
-					break;
-				case REFILL:
-					return;
-				case ERROR:
-					logger.info("request fail sending error frame");
-					//queueMessage(fv.call(Data.createDataError(StandardOperation.ERROR, (byte)1)));
-					silentlyClose();
-					return;
+				try {
+					Reader.ProcessStatus status = reader.process();
+					switch (status) {
+						case DONE:
+							Data frame = reader.get();
+							fv.call(frame);
+							reader.reset();
+							break;
+						case REFILL:
+							return;
+						case ERROR:
+							logger.info("request fail sending error frame");
+							//queueMessage(fv.call(Data.createDataError(StandardOperation.ERROR, (byte)1)));
+							silentlyClose();
+							return;
+						}
+				} catch(IllegalArgumentException e) {
+					logger.info("inexistant package format.");
 				}
 
 			}
