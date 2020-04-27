@@ -4,7 +4,13 @@ import java.nio.ByteBuffer;
 
 import fr.upem.net.tcp.reader.Reader;
 
-
+/**
+ * <p>
+ * The LongReader will be use to read {@link Long}.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class LongReader implements Reader<Long> {
 
 	
@@ -16,7 +22,12 @@ public class LongReader implements Reader<Long> {
     
     
 	/**
-	 * @param bb
+	 * Constructs a LongReader with it's {@link ByteBuffer}.
+	 * <p>
+     * The LongReader will flip at the start and compact at the end after it gets an {@link Long}.<br>
+     * The method get will return a {@link ByteBuffer}.
+     * </p>
+	 * @param bb a {@link ByteBuffer}.
 	 */
 	public LongReader(ByteBuffer bb) {
 		this.bb = bb;
@@ -41,6 +52,9 @@ public class LongReader implements Reader<Long> {
         }
 	}
 
+	/**
+	 * @return {@link Long}.
+	 */
 	@Override
 	public Long get() {
 		if (state!=State.DONE) {

@@ -7,6 +7,13 @@ import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
+/**
+ * <p>
+ * The FrameDeconnexionReader will be use to read the data.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FrameDeconnexionReader implements Reader<Data> {
 	
 	private static enum State {
@@ -18,6 +25,10 @@ public class FrameDeconnexionReader implements Reader<Data> {
 	private final StringReader stringReader;
 	private String login;
 	
+	/**
+	 * Constructs a FrameDeconnexionReader with it's {@link ByteBuffer}.
+	 * @param bb a {@link ByteBuffer}.
+	 */
 	public FrameDeconnexionReader(ByteBuffer bb) {
 		stringReader = new StringReader(bb);
 	}
@@ -44,6 +55,9 @@ public class FrameDeconnexionReader implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

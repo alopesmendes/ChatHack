@@ -30,16 +30,25 @@ import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.SelectReaderOpcode;
 
+/**
+ * <p>
+ * The ServerChatHack will let the server communicate with the server Mdp and other clients.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class ServerChatHack {
 
 	static private class DataMdp {
 		private final SelectionKey key;
 		private final Data.DataConnectionClient client;
 		private final Data.DataConnectionServerMdp mdp;
+		
 		/**
-		 * @param key
-		 * @param client
-		 * @param mdp
+		 * Constructs a DataMdp with it's key, client and mdp.
+		 * @param key a {@link SelectionKey}
+		 * @param client a {@link DataConnectionClient}
+		 * @param mdp a {@link DataConnectionServerMdp}
 		 */
 		private DataMdp(SelectionKey key, DataConnectionClient client, DataConnectionServerMdp mdp) {
 			this.key = key;
@@ -56,12 +65,17 @@ public class ServerChatHack {
 		final private ByteBuffer bbin = ByteBuffer.allocate(BUFFER_SIZE);
 		final private ByteBuffer bbout = ByteBuffer.allocate(BUFFER_SIZE);
 		final private BlockingQueue<ByteBuffer> queue = new LinkedBlockingQueue<>();
-		//final private ServerChatHack server;
 		final private Reader<Data> reader;
 		private boolean closed = false;
 		final private FrameVisitor fv;
 
 
+		/**
+		 * Constructs a Context with it's server, key and fv.
+		 * @param server a {@link ServerChatHack}
+		 * @param key a {@link SelectionKey}
+		 * @param fv a {@link FrameVisitor}
+		 */
 		private Context(ServerChatHack server, SelectionKey key, FrameVisitor fv) {
 			this.key = key;
 			this.sc = (SocketChannel) key.channel();
@@ -69,6 +83,12 @@ public class ServerChatHack {
 			this.fv = fv;
 		}
 
+		/**
+		 * Factory for Context, initiates our FrameVisitor for the server Mdp.
+		 * @param server a {@link ServerChatHack}
+		 * @param key a {@link SelectionKey}
+		 * @return Context
+		 */
 		private static Context contextServerMdp(ServerChatHack server, SelectionKey key) {
 			FrameVisitor fv = new FrameVisitor().
 
@@ -108,6 +128,12 @@ public class ServerChatHack {
 			return new Context(server, key, fv);
 		}
 
+		/**
+		 * Factory for Context, initiates a FrameVisitor for the client.
+		 * @param server a {@link ServerChatHack}
+		 * @param key a {@link SelectionKey}
+		 * @return Context
+		 */
 		private static Context contextClient(ServerChatHack server, SelectionKey key) {
 			FrameVisitor fv = new FrameVisitor().
 					when(Data.DataConnectionClient.class, d -> {
@@ -191,6 +217,7 @@ public class ServerChatHack {
 						Frame frame = Frame.createFramePrivateConnectionAccepted(data);
 						context.queueMessage(frame);
 						return frame;}).
+					
 					when(Data.DataDeconnexion.class, d -> {
 						if (key.attachment() == null) {
 							return null;
@@ -220,7 +247,7 @@ public class ServerChatHack {
 		 * The convention is that bbin is in write-mode before the call to process and
 		 * after the call
 		 * 
-		 * @throws IOException
+		 * @throws IOException a {@link IOException}
 		 *
 		 */
 		private void processIn() throws IOException {
@@ -253,7 +280,7 @@ public class ServerChatHack {
 		/**
 		 * Add a message to the message queue, tries to fill bbOut and updateInterestOps
 		 *
-		 * @param value
+		 * @param value a {@link Frame}
 		 */
 		private void queueMessage(Frame value) {
 			queue.add(value.buffer());
@@ -321,7 +348,7 @@ public class ServerChatHack {
 		 * The convention is that both buffers are in write-mode before the call to
 		 * doRead and after the call
 		 *
-		 * @throws IOException
+		 * @throws IOException a {@link IOException}
 		 */
 		private void doRead() throws IOException {
 			// TODO
@@ -367,6 +394,13 @@ public class ServerChatHack {
 
 
 
+	/**
+	 * Constructs a ServerChatHack with it's port, host and mdpPort.
+	 * @param port a int.
+	 * @param host a {@link String}.
+	 * @param mdpPort a int.
+	 * @throws IOException a {@link IOException}.
+	 */
 	public ServerChatHack(int port, String host, int mdpPort) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		serverSocketChannel.bind(new InetSocketAddress(port));
@@ -376,6 +410,10 @@ public class ServerChatHack {
 	}
 
 
+	/**
+	 * <p>Will launch the server and allow it to exchange with the server Mdp and it's clients.</p>
+	 * @throws IOException a {@link IOException}
+	 */
 	public void launch() throws IOException {
 
 		serverSocketChannel.configureBlocking(false);
@@ -448,7 +486,7 @@ public class ServerChatHack {
 	/**
 	 * Add a message to all connected clients queue
 	 *
-	 * @param value
+	 * @param value a {@link Frame}
 	 */
 	private void broadcast(Frame value) {
 		for (SelectionKey key : selector.keys()) {
@@ -460,6 +498,17 @@ public class ServerChatHack {
 		}
 	}
 
+	/**
+	 * 	<p>Will take up to 3 arguments in following order.</p>
+	 * 	<ul>
+	 * 		<li>the server port</li>
+	 * 		<li>the host of the server mdp</li>
+	 * 		<li>the server mdp port</li>
+	 * 	</ul>
+	 * @param args a array of {@link String}.
+	 * @throws NumberFormatException a {@link NumberFormatException}.
+	 * @throws IOException a {@link IOException}.
+	 */
 	public static void main(String[] args) throws NumberFormatException, IOException {
 		if (args.length != 3) {
 			usage();
@@ -469,7 +518,7 @@ public class ServerChatHack {
 	}
 
 	private static void usage() {
-		System.out.println("Usage : ServerSumBetter port");
+		System.out.println("Usage : ServerSumBetter port MdpHost MdpPort");
 	}
 
 	/***
@@ -491,6 +540,9 @@ public class ServerChatHack {
 		return String.join("|", list);
 	}
 
+	/**
+	 * Prints the keys.
+	 */
 	public void printKeys() {
 		Set<SelectionKey> selectionKeySet = selector.keys();
 		if (selectionKeySet.isEmpty()) {
@@ -517,6 +569,10 @@ public class ServerChatHack {
 		}
 	}
 
+	/**
+	 * Print the selected key.
+	 * @param key a {@link SelectionKey}
+	 */
 	public void printSelectedKey(SelectionKey key) {
 		SelectableChannel channel = key.channel();
 		if (channel instanceof ServerSocketChannel) {

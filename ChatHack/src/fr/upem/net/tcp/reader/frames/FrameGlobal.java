@@ -6,6 +6,13 @@ import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
+/**
+ * <p>
+ * The FrameGlobal will be use to read all the data.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FrameGlobal implements Reader<Data> {
 	
 	private enum State {
@@ -18,6 +25,10 @@ public class FrameGlobal implements Reader<Data> {
 	private String login;
 	private String message;
 	
+	/**
+	 * Constructs a FrameGlobal with it's {@link ByteBuffer}.
+	 * @param bb a {@link ByteBuffer}.
+	 */
 	public FrameGlobal(ByteBuffer bb) {
 		this.stringReader = new StringReader(bb);
 	}
@@ -52,6 +63,9 @@ public class FrameGlobal implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}.
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

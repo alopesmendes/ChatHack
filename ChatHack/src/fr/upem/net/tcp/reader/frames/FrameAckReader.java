@@ -8,9 +8,13 @@ import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
-
-
-
+/**
+ * <p>
+ * The FrameAckReader will be use to read the byte and maybe the next reader.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FrameAckReader implements Reader<Data> {
 
 	private enum State {
@@ -26,7 +30,8 @@ public class FrameAckReader implements Reader<Data> {
 	private byte op_request;
 	
 	/**
-	 * @param bb
+	 * Constructs a FrameAckReader with it's a {@link ByteBuffer}.
+	 * @param bb a {@link ByteBuffer}.
 	 */
 	public FrameAckReader(ByteBuffer bb) {
 		byteReader = new ByteReader(bb);
@@ -73,6 +78,9 @@ public class FrameAckReader implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

@@ -6,7 +6,13 @@ import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.LongReader;
 
-
+/**
+ * <p>
+ * The FrameMdpReader will be use to read all the data.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FrameMdpReader implements Reader<Data> {
 	
 	private enum State {
@@ -20,8 +26,11 @@ public class FrameMdpReader implements Reader<Data> {
 	private long id;
 	private Data data;
 	
+	
 	/**
-	 * @param bb
+	 * Constructs a FrameMdpReader with it's a {@link ByteBuffer} and a {@link Byte}.
+	 * @param bb a {@link ByteBuffer}.
+	 * @param op_code a {@link Byte}.
 	 */
 	public FrameMdpReader(ByteBuffer bb, byte op_code) {
 		this.longReader = new LongReader(bb);
@@ -46,6 +55,9 @@ public class FrameMdpReader implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

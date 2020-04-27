@@ -7,7 +7,13 @@ import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 
-
+/**
+ * <p>
+ * The FramePublicConnectionResponse will be use to read all the data.
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FramePublicConnectionResponse implements Reader<Data> {
 	
 	private enum State {
@@ -21,7 +27,8 @@ public class FramePublicConnectionResponse implements Reader<Data> {
 	private byte op_request;
 	
 	/**
-	 * @param bb
+	 * Constructs a FramePublicConnectionResponse with it's {@link ByteBuffer}.
+	 * @param bb a {@link ByteBuffer}.
 	 */
 	public FramePublicConnectionResponse(ByteBuffer bb) {
 		this.byteReader = new ByteReader(bb);
@@ -58,6 +65,9 @@ public class FramePublicConnectionResponse implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

@@ -7,6 +7,13 @@ import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
+/**
+ * <p>
+ * The FramePrivateConnectionRequestReader will be use to read all the data.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FramePrivateConnectionRequestReader implements Reader<Data> {
 	
 	private enum State {
@@ -20,6 +27,11 @@ public class FramePrivateConnectionRequestReader implements Reader<Data> {
 	private final StringReader stringReader;
 	private Data data;
 	
+	/**
+	 * Constructs a FramePrivateConnectionRequestReader with it's {@link Byte} and {@link ByteBuffer}.
+	 * @param step a {@link Byte}.
+	 * @param bb a {@link ByteBuffer}.
+	 */
 	public FramePrivateConnectionRequestReader(byte step, ByteBuffer bb) {
 		stringReader = new StringReader(bb);
 		this.step = step;
@@ -54,6 +66,9 @@ public class FramePrivateConnectionRequestReader implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

@@ -8,6 +8,13 @@ import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
+/**
+ * <p>
+ * The FramePrivateConnectionReponseReader will be use to read all the data.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FramePrivateConnectionReponseReader implements Reader<Data> {
 	private enum State {
 		DONE, WAITING_FIRST_CLIENT, WAITING_SECOND_CLIENT, WAITING_STATE, ERROR;
@@ -22,6 +29,11 @@ public class FramePrivateConnectionReponseReader implements Reader<Data> {
 	private String secondClient;
 	private Data data;
 	
+	/**
+	 * Constructs a FramePrivateConnectionReponseReader with it's {@link Byte} and {@link ByteBuffer}.
+	 * @param step a {@link Byte}.
+	 * @param bb a {@link ByteBuffer}.
+	 */
 	public FramePrivateConnectionReponseReader(byte step, ByteBuffer bb) {
 		this.step = step;
 		byteReader = new ByteReader(bb);
@@ -66,6 +78,9 @@ public class FramePrivateConnectionReponseReader implements Reader<Data> {
 			}
 	}
 
+	/**
+	 * @return {@link Data}
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

@@ -9,6 +9,13 @@ import fr.upem.net.tcp.reader.basics.IntReader;
 import fr.upem.net.tcp.reader.basics.LongReader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
+/**
+ * <p>
+ * The FramePrivateConnectionAcceptedReader will be use to read all the data.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FramePrivateConnectionAcceptedReader implements Reader<Data> {
 	
 	private enum State {
@@ -27,6 +34,11 @@ public class FramePrivateConnectionAcceptedReader implements Reader<Data> {
 	private long token;
 	private Data data;
 	
+	/**
+	 * Constructs a FramePrivateConnectionAcceptedReader with it's a {@link Byte} and a {@link ByteBuffer}.
+	 * @param step a {@link Byte}.
+	 * @param bb a {@link ByteBuffer}.
+	 */
 	public FramePrivateConnectionAcceptedReader(byte step, ByteBuffer bb) {
 		this.step = step;
 		stringReader = new StringReader(bb);
@@ -88,6 +100,9 @@ public class FramePrivateConnectionAcceptedReader implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}.
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

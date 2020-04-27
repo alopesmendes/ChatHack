@@ -4,12 +4,15 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
@@ -32,6 +35,13 @@ import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.SelectReaderOpcode;
 
+/**
+ * <p>
+ * The ChatHack will let a client communicate with a server and other clients.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class ChatHack {
 	
 	private static enum State {
@@ -65,6 +75,7 @@ public class ChatHack {
 			String[] s = action.split(" ", 2);
 			String log = s[0].substring(1);
 			if (map.containsKey(log) && !map.get(log).isValid()) {
+				logger.info("Client "+log+ " does not exist");
 				map.remove(log);
 			}
 			if (log.equals(client.login)) {
@@ -74,8 +85,8 @@ public class ChatHack {
 				state = State.SENDING_REPONSE;
 				client.sendPrivateConnectionRequest(log);
 			} else {
-				String text = "";
-				if (s.length == 2) {
+				String text = " ";
+				if (s.length == 2 && !s[1].isBlank()) {
 					text = s[1];
 					sendingMessageOrFile(client, action, log, text);
 				}
@@ -137,8 +148,10 @@ public class ChatHack {
 		private void sendingMessageOrFile(ChatHack client, String message, String login, String text) throws IOException {
 			state = State.NONE;
 			SelectionKey key = map.get(login);
-			if (key == null || key.attachment() == null || !key.isValid()) {
-				
+			System.out.println("ici:" + map.keySet() + " " + key.isValid());
+			if (key == null || key.attachment() == null || !key.isValid() ) {
+				map.remove(login);
+				System.out.println("--- HERE ---");
 				return;
 			} 
 			Context context = (Context)key.attachment();
@@ -211,7 +224,7 @@ public class ChatHack {
 
 		/**
 		 * @param isDone the isDone to set
-		 * @throws IOException 
+		 * @throws IOException a {@link IOException}
 		 */
 		public void end(ChatHack client) throws IOException {
 			lock.lock();
@@ -367,6 +380,17 @@ public class ChatHack {
 			
 			when(Data.DataPrivateFile.class, d -> {
 				Path path = Path.of(client.path.toString(), d.fileName());
+				SelectionKey k = client.action.map.get(d.login());
+				if (k == null || k.attachment() == null) {
+					return null;
+				}
+				if (Files.notExists(path, LinkOption.NOFOLLOW_LINKS)) {
+					var data = Data.createDataError(StandardOperation.ERROR, StandardOperation.PRIVATE_FILE);
+					Frame frame = Frame.createFrameError(data);
+					((Context) k.attachment()).queueMessage(frame.buffer());
+					return frame;
+					
+				}
 				try (FileChannel fc = FileChannel.open(path , StandardOpenOption.CREATE
 															, StandardOpenOption.TRUNCATE_EXISTING
 															, StandardOpenOption.WRITE)) {
@@ -378,10 +402,7 @@ public class ChatHack {
 					}
 					logger.info("Received file "+d.fileName()+" from "+d.login());
 				} catch (IOException e) { }
-				SelectionKey k = client.action.map.get(d.login());
-				if (k == null || k.attachment() == null) {
-					return null;
-				}
+				
 				var data = Data.createDataPrivateAck(StandardOperation.ACK, StandardOperation.PRIVATE_FILE, client.login);
 				Frame frame = Frame.createFramePrivateAck(data);
 				((Context) k.attachment()).queueMessage(frame.buffer());
@@ -404,6 +425,10 @@ public class ChatHack {
 					default:
 						throw new IllegalArgumentException("Unexpected value: " + d);
 				}
+				return null;}).
+			
+			when(Data.DataError.class, d -> {
+				logger.info("Private Error");
 				return null;
 			});
 
@@ -414,7 +439,7 @@ public class ChatHack {
 		/**
 		 * Add a message to the message queue, tries to fill bbOut and updateInterestOps
 		 *
-		 * @param bb
+		 * @param bb a {@link ByteBuffer}
 		 */
 		private void queueMessage(ByteBuffer bb) {
 			
@@ -565,7 +590,17 @@ public class ChatHack {
 	private Thread thread;
 	
 
-	public ChatHack(Path path, int clientPort, String host, int port, String login, Optional<String> password) throws IOException {
+	/**
+	 * Constructs a ChatHack with it's path, clientPort, host, port, login and password.
+	 * @param path a {@link Path}
+	 * @param clientPort a int
+	 * @param host a {@link String}
+	 * @param port a int
+	 * @param login a {@link String}
+	 * @param password a {@link Optional} of {@link String}
+	 * @throws IOException a {@link IOException}.
+	 */
+	private ChatHack(Path path, int clientPort, String host, int port, String login, Optional<String> password) throws IOException {
 		serverSocketChannel = ServerSocketChannel.open();
 		selector = Selector.open();
 		sc = SocketChannel.open();
@@ -578,6 +613,19 @@ public class ChatHack {
 
 	}
 
+	/**
+	 * <p>Factory to create ChatHack, it will also attribute a free random port number to identify our client.</p>
+	 * The path will determine the directory in which there will be the files our client wants acess to echange.<br>
+	 * The hostname and port are use to link the client to a server.<br>
+	 * The login and password are used to identify a client but also allow the client to connect with the server.<br>
+	 * @param path a {@link Path}
+	 * @param hostname a {@link String}
+	 * @param port a int.
+	 * @param login a {@link String}
+	 * @param password a {@link Optional} of {@link String}.
+	 * @return ChatHack
+	 * @throws IOException a {@link IOException}.
+	 */
 	public static ChatHack create(Path path, String hostname, int port, String login, Optional<String> password) throws IOException {
 		Objects.requireNonNull(path);
 		Objects.requireNonNull(hostname);
@@ -649,12 +697,19 @@ public class ChatHack {
 	
 	
 
+	/**
+	 * <p>Will launch the client and allow it to exchange with the server and other clients.</p>
+	 * Will start another thread to get typing information and send Frame respectively.
+	 * @throws IOException a {@link IOException}.
+	 * @throws InterruptedException a {@link InterruptedException}.
+	 */
 	public void launch() throws IOException, InterruptedException {
 		thread = new Thread(() -> {
 			try {
 				sendAction();
 			} catch (InterruptedException e) {
-				
+				Thread.currentThread().interrupt();
+				return;
 			}
 		});
 		serverSocketChannel.configureBlocking(false);
@@ -666,6 +721,11 @@ public class ChatHack {
 		Set<SelectionKey> selectedKeys = selector.selectedKeys();
 		thread.start();
 		while (!Thread.interrupted() && !action.isDone(this)) {
+			if (!uniqueKey.isValid()) {
+				logger.log(Level.SEVERE, "Interruption of Client - Server connection");
+				Thread.currentThread().interrupt();
+				return;
+			}
 			selector.select();
 			processSelectedKeys(selectedKeys);
 			action.treat(this);
@@ -675,17 +735,21 @@ public class ChatHack {
 
 	private void processSelectedKeys(Set<SelectionKey> selectedKeys) throws IOException, InterruptedException {
 		for (SelectionKey key : selectedKeys) {
-			if (key.isValid() && key.isAcceptable()) {
-				doAccept(key);
-			}
-			if (key.isValid() && key.isConnectable()) {
-				((Context)key.attachment()).doConnect();
-			}
-			if (key.isValid() && key.isWritable()) {
-				((Context)key.attachment()).doWrite();
-			}
-			if (key.isValid() && key.isReadable()) {
-				((Context)key.attachment()).doRead();
+			try {
+				if (key.isValid() && key.isAcceptable()) {
+					doAccept(key);
+				}
+				if (key.isValid() && key.isConnectable()) {
+					((Context)key.attachment()).doConnect();
+				}
+				if (key.isValid() && key.isWritable()) {
+					((Context)key.attachment()).doWrite();
+				}
+				if (key.isValid() && key.isReadable()) {
+					((Context)key.attachment()).doRead();
+				}
+			} catch(SocketException e) {
+				key.cancel();
 			}
 			
 		}
@@ -706,6 +770,20 @@ public class ChatHack {
 		System.out.println("Usage : ChatHack path, host, port, login and maybe password");
 	}
 
+	/**
+	 * 	<p>Will take up to 4 or 5 arguments in following order.</p>
+	 * 	<ul>
+	 * 		<li>a valid path to a directory</li>
+	 * 		<li>the host of the server</li>
+	 * 		<li>the server port</li>
+	 * 		<li>the client login</li>
+	 * 		<li>password not necessary in some cases</li>
+	 * 	</ul>
+	 * @param args a array of {@link String}
+	 * @throws NumberFormatException a {@link NumberFormatException}
+	 * @throws IOException a {@link IOException}
+	 * @throws InterruptedException a {@link InterruptedException}
+	 */
 	public static void main(String[] args) throws NumberFormatException, IOException, InterruptedException {
 		if (args.length != 4 && args.length != 5) {
 			usage();

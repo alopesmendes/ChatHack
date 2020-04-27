@@ -7,9 +7,13 @@ import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 
-
-
-
+/**
+ * <p>
+ * The FrameErrorReader will be use to read all the data.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FrameErrorReader implements Reader<Data> {
 
 	private enum State {
@@ -22,7 +26,8 @@ public class FrameErrorReader implements Reader<Data> {
 	private byte op_request;
 	
 	/**
-	 * @param bb
+	 * Constructs a FrameErrorReader with it's a {@link ByteBuffer}.
+	 * @param bb a {@link ByteBuffer}.
 	 */
 	public FrameErrorReader(ByteBuffer bb) {
 		this.byteReader = new ByteReader(bb);
@@ -53,6 +58,9 @@ public class FrameErrorReader implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

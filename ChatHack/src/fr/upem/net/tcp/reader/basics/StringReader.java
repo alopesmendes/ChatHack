@@ -5,6 +5,13 @@ import java.nio.charset.StandardCharsets;
 
 import fr.upem.net.tcp.reader.Reader;
 
+/**
+ * <p>
+ * The StringReader will be use to read an {@link String}.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class StringReader implements Reader<String>{
 	private enum State {
 		DONE, WAITING_SIZE, WAITING_MSG, ERROR
@@ -15,7 +22,15 @@ public class StringReader implements Reader<String>{
 	private State state = State.WAITING_SIZE;
 	private int size;
 	private String text;
-	
+
+	/**
+	 * Constructs a StringReader with it's {@link ByteBuffer}.
+	 * <p>
+     * The StringReader will flip at the start and compact at the end after it gets an {@link String}.<br>
+     * The method get will return a {@link ByteBuffer}.
+     * </p>
+	 * @param bb a {@link ByteBuffer}.
+	 */
 	public StringReader(ByteBuffer bb) {
 		this.bb = bb;
 	}
@@ -58,7 +73,12 @@ public class StringReader implements Reader<String>{
 			bb.compact();
 		}
 	}
-	
+	/**
+	 * Will transfer every byte of src until dst is filled.
+	 * @param src a {@link ByteBuffer}.
+	 * @param dst a {@link ByteBuffer}
+	 * @return DONE if dst is filled otherwise REFILL.
+	 */
 	private ProcessStatus transferBytes(ByteBuffer src, ByteBuffer dst) {
 		while (src.hasRemaining() && dst.hasRemaining()) {
 			dst.put(src.get());
@@ -66,6 +86,9 @@ public class StringReader implements Reader<String>{
 		return dst.hasRemaining() ? ProcessStatus.REFILL : ProcessStatus.DONE;
 	}
 
+	/**
+	 * @return {@link String}
+	 */
 	@Override
 	public String get() {
 		if (state != State.DONE) {

@@ -6,16 +6,22 @@ import java.util.HashMap;
 import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.frame.StandardOperation;
 import fr.upem.net.tcp.reader.basics.ByteReader;
-import fr.upem.net.tcp.reader.frames.FrameMdpReader;
 import fr.upem.net.tcp.reader.frames.FrameAckReader;
 import fr.upem.net.tcp.reader.frames.FrameDeconnexionReader;
 import fr.upem.net.tcp.reader.frames.FrameErrorReader;
 import fr.upem.net.tcp.reader.frames.FrameGlobal;
+import fr.upem.net.tcp.reader.frames.FrameMdpReader;
 import fr.upem.net.tcp.reader.frames.FramePrivateConnectionReader;
 import fr.upem.net.tcp.reader.frames.FramePrivateFileReader;
 import fr.upem.net.tcp.reader.frames.FramePrivateMessageReader;
 import fr.upem.net.tcp.reader.frames.FramePublicConnectReader;
 
+/**
+ * <p>The SelectReaderOpcode will be our factory {@link Reader}.</p>
+ * Will select the correct {@link Reader} according to the first byte it reads.
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class SelectReaderOpcode implements Reader<Data> {
 
 	private enum State {
@@ -29,11 +35,22 @@ public class SelectReaderOpcode implements Reader<Data> {
 	private Data data;
 	
 	
+	/**
+	 * Constructs a SelectReaderOpcode with it's {@link ByteBuffer} and {@link HashMap}.
+	 * @param bb a {@link ByteBuffer}.
+	 * @param map a {@link HashMap} of {@link Byte} as key and {@link Reader} of {@link Data} as value.
+	 */
 	private SelectReaderOpcode(ByteBuffer bb, HashMap<Byte, Reader<Data>> map) {
 		this.byteReader = new ByteReader(bb);
 		this.map = map;
 	}
 	
+	/**
+	 * Factory to create {@link Reader} of {@link Data}.
+	 * Initiates our {@link HashMap}.
+	 * @param bb a {@link ByteBuffer}.
+	 * @return SelectReaderOpcode.
+	 */
 	public static Reader<Data> create(ByteBuffer bb) {
 		HashMap<Byte, Reader<Data>> map = new HashMap<>();
 		map.put(StandardOperation.GLOBAL_MESSAGE.opcode(), new FrameGlobal(bb));
@@ -83,6 +100,9 @@ public class SelectReaderOpcode implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}.
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

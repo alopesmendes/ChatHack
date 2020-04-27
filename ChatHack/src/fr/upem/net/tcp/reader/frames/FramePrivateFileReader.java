@@ -9,6 +9,13 @@ import fr.upem.net.tcp.reader.basics.FileReader;
 import fr.upem.net.tcp.reader.basics.IntReader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
+/**
+ * <p>
+ * The FramePrivateFileReader will be use to read all the data.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FramePrivateFileReader implements Reader<Data> {
 
 	private enum State {
@@ -25,6 +32,10 @@ public class FramePrivateFileReader implements Reader<Data> {
 	private ByteBuffer fileBuffer;
 	private Data data;
 
+	/**
+	 * Constructs a FramePrivateFileReader with it's {@link ByteBuffer}.
+	 * @param bb a {@link ByteBuffer}.
+	 */
 	public FramePrivateFileReader(ByteBuffer bb) {
 		stringReader = new StringReader(bb);
 		intReader = new IntReader(bb);
@@ -71,6 +82,9 @@ public class FramePrivateFileReader implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

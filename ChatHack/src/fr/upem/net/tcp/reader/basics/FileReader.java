@@ -4,12 +4,27 @@ import java.nio.ByteBuffer;
 
 import fr.upem.net.tcp.reader.Reader;
 
+/**
+ * <p>
+ * The FileReader will be use to read all the bytes of a File.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FileReader implements Reader<ByteBuffer>{
 
 	private enum State {
 		DONE, WAITING_SIZE, WAITING_BUFFER, ERROR;
 	}
 
+	/**
+	 * Constructs a FileReader with it's {@link ByteBuffer}.
+	 * <p>
+     * The FileReader will flip at the start and compact at the end after it gets all {@link Byte}.<br>
+     * The method get will return a {@link ByteBuffer}.
+     * </p>
+	 * @param bb a {@link ByteBuffer}.
+	 */
 	public FileReader(ByteBuffer bb) {
 		this.bb = bb;
 	}
@@ -19,6 +34,13 @@ public class FileReader implements Reader<ByteBuffer>{
 	private int size;
 	private ByteBuffer buffer;
 
+	/**
+	 * {@inheritDoc}
+	 * Will first get the size.
+	 * Then will create a {@link ByteBuffer} of the correct size.
+	 * Will transfer every byte to our buffer.
+	 * If the buffer is not fill this method will return REFILL, otherwise DONE.
+	 */
 	@Override
 	public ProcessStatus process() {
 		if (state == State.DONE || state == State.ERROR) {
@@ -56,6 +78,12 @@ public class FileReader implements Reader<ByteBuffer>{
 		}
 	}
 	
+	/**
+	 * Will transfer every byte of src until dst is filled.
+	 * @param src a {@link ByteBuffer}.
+	 * @param dst a {@link ByteBuffer}
+	 * @return DONE if dst is filled otherwise REFILL.
+	 */
 	private ProcessStatus transferBytes(ByteBuffer src, ByteBuffer dst) {
 		while (src.hasRemaining() && dst.hasRemaining()) {
 			dst.put(src.get());
@@ -63,6 +91,9 @@ public class FileReader implements Reader<ByteBuffer>{
 		return dst.hasRemaining() ? ProcessStatus.REFILL : ProcessStatus.DONE;
 	}
 
+	/**
+	 * @return {@link ByteBuffer}
+	 */
 	@Override
 	public ByteBuffer get() {
 		if (state != State.DONE) {

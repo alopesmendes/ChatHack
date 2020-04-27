@@ -9,7 +9,13 @@ import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 import fr.upem.net.tcp.reader.basics.StringReader;
 
-
+/**
+ * <p>
+ * The FramePublicConnectReader will be use to read all the data.
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FramePublicConnectReader implements Reader<Data> {
 
 	private enum State {
@@ -26,7 +32,8 @@ public class FramePublicConnectReader implements Reader<Data> {
 	private Data data;
 	
 	/**
-	 * @param bb
+	 * Constructs a FramePublicConnectReader with it's {@link ByteBuffer}.
+	 * @param bb a {@link ByteBuffer}.
 	 */
 	public FramePublicConnectReader(ByteBuffer bb) {
 		this.stringReader = new StringReader(bb);
@@ -80,6 +87,9 @@ public class FramePublicConnectReader implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

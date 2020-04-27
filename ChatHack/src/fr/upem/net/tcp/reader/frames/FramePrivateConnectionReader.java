@@ -8,6 +8,13 @@ import fr.upem.net.tcp.frame.Data;
 import fr.upem.net.tcp.reader.Reader;
 import fr.upem.net.tcp.reader.basics.ByteReader;
 
+/**
+ * <p>
+ * The FramePrivateConnectionAcceptedReader will be use to read all the data.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public class FramePrivateConnectionReader implements Reader<Data> {
 	
 	private enum State {
@@ -21,11 +28,22 @@ public class FramePrivateConnectionReader implements Reader<Data> {
 	private Reader<Data> reader;
 	private Data data;
 	
+	/**
+	 * Constructs a FramePrivateConnectionReader with it's {@link ByteBuffer} and {@link Map}.
+	 * @param bb a {@link ByteBuffer}.
+	 * @param map a {@link Map}.
+	 */
 	private FramePrivateConnectionReader(ByteBuffer bb, Map<Byte, Reader<Data>> map) {
 		byteReader = new ByteReader(bb);
 		this.map = map;
 	}
 	
+	/**
+	 * A Factory Method which will create our FramePrivateConnectionReader.
+	 * It will initiate the map.
+	 * @param bb a {@link ByteBuffer}.
+	 * @return a FramePrivateConnectionReader.
+	 */
 	public static FramePrivateConnectionReader create(ByteBuffer bb) {
 		HashMap<Byte, Reader<Data>> map = new HashMap<>();
 		map.put((byte)1, new FramePrivateConnectionRequestReader((byte)1, bb));
@@ -50,7 +68,7 @@ public class FramePrivateConnectionReader implements Reader<Data> {
 				}
 				step = byteReader.get();
 				byteReader.reset();
-				reader = map.computeIfAbsent(step, b -> { throw new AssertionError();});
+				reader = map.computeIfAbsent(step, b -> { throw new IllegalArgumentException();});
 				state = State.WAITING_READER;
 			case WAITING_READER:
 				ProcessStatus processLogin = reader.process();
@@ -67,6 +85,9 @@ public class FramePrivateConnectionReader implements Reader<Data> {
 		}
 	}
 
+	/**
+	 * @return {@link Data}
+	 */
 	@Override
 	public Data get() {
 		if (state != State.DONE) {

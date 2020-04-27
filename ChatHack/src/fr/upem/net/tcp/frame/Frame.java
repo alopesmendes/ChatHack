@@ -18,14 +18,27 @@ import fr.upem.net.tcp.frame.Data.DataPrivateConnectionRequested;
 import fr.upem.net.tcp.frame.Data.DataPrivateFile;
 import fr.upem.net.tcp.frame.Data.DataPrivateMessage;
 
+/**
+ * <p>
+ * The Frame will be use to create a Frame which will create a ByteByffer with the data.<br>
+ * </p>
+ * @author LOPES MENDES Ailton
+ * @author LAMBERT--DELAVAQUERIE Fabien
+ */
 public interface Frame {
 
 
 	/**
-	 * @return the buffer according to the frame.
+	 * <p>Will create a {@link ByteBuffer} from the current Frame.</p>
+	 * @return the {@link ByteBuffer} according to the frame.
 	 */
 	ByteBuffer buffer();
 
+	/**
+	 * Creates a Frame Global with it's {@link DataGlobalClient}.
+	 * @param data a {@link DataGlobalClient}.
+	 * @return Frame.
+	 */
 	static Frame createFrameGlobal(DataGlobalClient data) {
 		Objects.requireNonNull(data);
 		ByteBuffer message = new FrameText(data.message).buffer();
@@ -41,9 +54,9 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Error Frame.
-	 * @param data a DataError.
-	 * @return FrameError.
+	 * Creates a Error Frame with it's {@link DataError}.
+	 * @param data a {@link DataError}.
+	 * @return Frame.
 	 */
 	static Frame createFrameError(DataError data) {
 		Objects.requireNonNull(data);
@@ -55,9 +68,9 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Connection Frame.
-	 * @param data a DataConnection.
-	 * @return FrameConnection.
+	 * Creates a Connection Frame with it's {@link DataConnectionClient}.
+	 * @param data a {@link DataConnectionClient}.
+	 * @return Frame.
 	 */
 	static Frame createFrameConnection(DataConnectionClient data) {
 		Objects.requireNonNull(data);
@@ -84,9 +97,9 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a FrameConnectionMdp.
-	 * @param data a DataConnectionServerMdp.
-	 * @return FrameConnectMdp.
+	 * Creates a Frame Connection Mdp with it's {@link DataConnectionServerMdp}.
+	 * @param data a {@link DataConnectionServerMdp}.
+	 * @return Frame.
 	 */
 	static Frame createFrameConnectionMdp(DataConnectionServerMdp data) {
 		Objects.requireNonNull(data);
@@ -116,9 +129,9 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a FrameConnectMdpServer.
-	 * @param data a DataConnectionServerMdpReponse.
-	 * @return FrameConnectMdpServer.
+	 * Creates a Frame Connect Mdp Server with it's {@link DataConnectionServerMdpReponse}.
+	 * @param data a {@link DataConnectionServerMdpReponse}.
+	 * @return Frame.
 	 */
 	static Frame createFrameConnectMdpServer(DataConnectionServerMdpReponse data) {
 		Objects.requireNonNull(data);
@@ -132,9 +145,9 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a FramePrivateConnectionRequested.
-	 * @param data a DataPrivateConnectionRequested.
-	 * @return FramePrivateConnectionRequested.
+	 * Creates a Frame Private Connection Requested with it's {@link DataPrivateConnectionRequested}.
+	 * @param data a {@link DataPrivateConnectionRequested}.
+	 * @return Frame.
 	 */
 	static Frame createFramePrivateConnectionRequested(DataPrivateConnectionRequested data) {
 		Objects.requireNonNull(data);
@@ -151,9 +164,9 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a FramePrivateConnectionReponse.
-	 * @param data a DataPrivateConnectionReponse.
-	 * @return FramePrivateConnectionReponse.
+	 * Creates a Frame Private Connection Reponse with it's {@link DataPrivateConnectionReponse}.
+	 * @param data a {@link DataPrivateConnectionReponse}.
+	 * @return Frame.
 	 */
 	static Frame createFramePrivateConnectionReponse(DataPrivateConnectionReponse data) {
 		Objects.requireNonNull(data);
@@ -171,9 +184,9 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a FramePrivateConnectionAccepted.
-	 * @param data a DataPrivateConnectionAccepted.
-	 * @return FramePrivateConnectionAccepted.
+	 * Creates a Frame Private Connection Accepted with it's {@link DataPrivateConnectionAccepted}.
+	 * @param data a {@link DataPrivateConnectionAccepted}.
+	 * @return Frame.
 	 */
 	static Frame createFramePrivateConnectionAccepted(DataPrivateConnectionAccepted data) {
 		Objects.requireNonNull(data);
@@ -197,9 +210,9 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a FramePrivateMessage.
+	 * Creates a Frame Private Message with it's {@link DataPrivateMessage}.
 	 * @param data a {@link DataPrivateMessage}.
-	 * @return FramePrivateMessage.
+	 * @return Frame.
 	 */
 	static Frame createFramePrivateMessage(DataPrivateMessage data) {
 		Objects.requireNonNull(data);
@@ -216,9 +229,9 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a FramePrivateFile.
+	 * Creates a Frame Private File with it's {@link DataPrivateFile}.
 	 * @param data a {@link DataPrivateFile}.
-	 * @return FramePrivateFile.
+	 * @return Frame.
 	 */
 	static Frame createFramePrivateFile(DataPrivateFile data) {
 		Objects.requireNonNull(data);
@@ -241,9 +254,9 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a FrameAck.
+	 * Creates a Frame Ack with it's {@link DataAck}.
 	 * @param data a {@link DataAck}.
-	 * @return FrameAck.
+	 * @return Frame.
 	 */
 	static Frame createFrameAck(DataAck data) {
 		Objects.requireNonNull(data);
@@ -254,6 +267,11 @@ public interface Frame {
 		};
 	}
 
+	/**
+	 * Creates a Frame with it's {@link DataPrivateAck}.
+	 * @param data a {@link DataPrivateAck}.
+	 * @return Frame
+	 */
 	static Frame createFramePrivateAck(DataPrivateAck data) {
 		Objects.requireNonNull(data);
 		ByteBuffer login = new FrameText(data.login).buffer();
@@ -267,9 +285,9 @@ public interface Frame {
 	}
 	
 	/**
-	 * Creates a FrameDeconnexion.
+	 * Creates a Frame Deconnexion with it's {@link DataDeconnexion}.
 	 * @param data a {@link DataDeconnexion}.
-	 * @return FrameDeconnexion.
+	 * @return Frame.
 	 */
 	static Frame createFrameDeconnexion(DataDeconnexion data) {
 		Objects.requireNonNull(data);
