@@ -8,7 +8,7 @@ import fr.upem.net.tcp.frame.Data.DataAck;
 import fr.upem.net.tcp.frame.Data.DataConnectionClient;
 import fr.upem.net.tcp.frame.Data.DataConnectionServerMdp;
 import fr.upem.net.tcp.frame.Data.DataConnectionServerMdpReponse;
-import fr.upem.net.tcp.frame.Data.DataDeconnexion;
+import fr.upem.net.tcp.frame.Data.DataLogout;
 import fr.upem.net.tcp.frame.Data.DataError;
 import fr.upem.net.tcp.frame.Data.DataGlobalClient;
 import fr.upem.net.tcp.frame.Data.DataPrivateAck;
@@ -285,11 +285,11 @@ public interface Frame {
 	}
 	
 	/**
-	 * Creates a Frame Deconnexion with it's {@link DataDeconnexion}.
-	 * @param data a {@link DataDeconnexion}.
+	 * Creates a Frame Deconnexion with it's {@link DataLogout}.
+	 * @param data a {@link DataLogout}.
 	 * @return Frame.
 	 */
-	static Frame createFrameDeconnexion(DataDeconnexion data) {
+	static Frame createFrameDeconnexion(DataLogout data) {
 		Objects.requireNonNull(data);
 		ByteBuffer login = new FrameText(data.login).buffer();
 

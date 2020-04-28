@@ -218,13 +218,13 @@ public class ServerChatHack {
 						context.queueMessage(frame);
 						return frame;}).
 					
-					when(Data.DataDeconnexion.class, d -> {
+					when(Data.DataLogout.class, d -> {
 						if (key.attachment() == null) {
 							return null;
 						}
 						logger.info("Client deconnected: " + key);
 						Context context = (Context)key.attachment();
-						var data = Data.createDataAck(StandardOperation.ACK, StandardOperation.DECONNEXION);
+						var data = Data.createDataAck(StandardOperation.ACK, StandardOperation.LOGOUT);
 						Frame frame = Frame.createFrameAck(data);
 						context.queueMessage(frame);
 						context.closed = true;

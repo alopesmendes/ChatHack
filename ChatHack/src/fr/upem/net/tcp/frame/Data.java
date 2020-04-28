@@ -743,7 +743,7 @@ public interface Data {
 	 * 	@author LOPES MENDES Ailton
 	 * 	@author LAMBERT--DELAVAQUERIE Fabien
 	 */
-	static class DataDeconnexion implements Data {
+	static class DataLogout implements Data {
 		final StandardOperation opcode;
 		final DataText login;
 		
@@ -752,7 +752,7 @@ public interface Data {
 		 * @param opcode a {@link StandardOperation}.
 		 * @param login a {@link DataText}.
 		 */
-		private DataDeconnexion(StandardOperation opcode, DataText login) {
+		private DataLogout(StandardOperation opcode, DataText login) {
 			this.opcode = opcode;
 			this.login = login;
 		}
@@ -764,10 +764,10 @@ public interface Data {
 		
 		@Override
 		public boolean equals(Object obj) {
-			if (!(obj instanceof DataDeconnexion)) {
+			if (!(obj instanceof DataLogout)) {
 				return false;
 			}
-			DataDeconnexion d = (DataDeconnexion)obj;
+			DataLogout d = (DataLogout)obj;
 			return d.opcode==opcode && d.login.equals(login);
 		}
 		
@@ -963,14 +963,14 @@ public interface Data {
 	}
 	
 	/**
-	 * Creates a DataDeconnexion.
+	 * Creates a DataLogout.
 	 * @param opcode a {@link StandardOperation}.
 	 * @param login a {@link String}.
-	 * @return DataDeconnexion.
+	 * @return DataLogout.
 	 */
-	static DataDeconnexion createDataDeconnexion(StandardOperation opcode, String login) {
+	static DataLogout createDataLogout(StandardOperation opcode, String login) {
 		Objects.requireNonNull(login);
 		DataText loginData = new DataText(login);
-		return new DataDeconnexion(opcode, loginData);
+		return new DataLogout(opcode, loginData);
 	}
 }

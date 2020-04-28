@@ -11,7 +11,7 @@ import java.util.Optional;
  */
 public enum StandardOperation {
 	CONNEXION(3), GLOBAL_MESSAGE(4), PRIVATE_CONNEXION(5), PRIVATE_MESSAGE(6),
-	PRIVATE_FILE(7), DECONNEXION(8), ACK(9), ERROR(10);
+	PRIVATE_FILE(7), LOGOUT(8), ACK(9), ERROR(10);
 	
 	private final int opcode;
 
@@ -46,8 +46,8 @@ public enum StandardOperation {
 			return Optional.of(PRIVATE_MESSAGE);
 		} else if (PRIVATE_FILE.opcode == code) {
 			return Optional.of(PRIVATE_FILE);
-		} else if (DECONNEXION.opcode == code) {
-			return Optional.of(DECONNEXION);
+		} else if (LOGOUT.opcode == code) {
+			return Optional.of(LOGOUT);
 		} else if (ACK.opcode == code) {
 			return Optional.of(ACK);
 		} else if (ERROR.opcode == code) {

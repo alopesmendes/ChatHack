@@ -9,12 +9,12 @@ import fr.upem.net.tcp.reader.basics.StringReader;
 
 /**
  * <p>
- * The FrameDeconnexionReader will be use to read the data.<br>
+ * The FrameLogoutReader will be use to read the data.<br>
  * </p>
  * @author LOPES MENDES Ailton
  * @author LAMBERT--DELAVAQUERIE Fabien
  */
-public class FrameDeconnexionReader implements Reader<Data> {
+public class FrameLogoutReader implements Reader<Data> {
 	
 	private static enum State {
 		DONE, WAITING_LOGIN, ERROR;
@@ -26,10 +26,10 @@ public class FrameDeconnexionReader implements Reader<Data> {
 	private String login;
 	
 	/**
-	 * Constructs a FrameDeconnexionReader with it's {@link ByteBuffer}.
+	 * Constructs a FrameLogoutReader with it's {@link ByteBuffer}.
 	 * @param bb a {@link ByteBuffer}.
 	 */
-	public FrameDeconnexionReader(ByteBuffer bb) {
+	public FrameLogoutReader(ByteBuffer bb) {
 		stringReader = new StringReader(bb);
 	}
 	
@@ -47,7 +47,7 @@ public class FrameDeconnexionReader implements Reader<Data> {
 			login = stringReader.get();
 			stringReader.reset();
 			state = State.DONE;
-			data = Data.createDataDeconnexion(StandardOperation.DECONNEXION, login);
+			data = Data.createDataLogout(StandardOperation.LOGOUT, login);
 			return ProcessStatus.DONE;
 
 		default:

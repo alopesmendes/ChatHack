@@ -23,6 +23,7 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
@@ -57,8 +58,14 @@ public class ChatHack {
 		private String privateConnexion;
 		private String firstPrivateMessage;
 		private boolean isDone = false;
+		private long currentTime;
+		private long lastTime;
 		
 		
+		/**
+		 * Will set privateConnexion and state at None.
+		 * @param privateConnexion a {@link String}
+		 */
 		public void setPrivateConnexion(String privateConnexion) {
 			lock.lock();
 			try {
@@ -70,6 +77,13 @@ public class ChatHack {
 
 		}
 		
+		/**
+		 * Decides if it's possible to send something to a client and if the client exists.
+		 * Also decides if it's sending a request or a message or a file.
+		 * @param action a {@link String}
+		 * @param client a {@link ChatHack}
+		 * @throws IOException a {@link IOException}
+		 */
 		private void privateMessageOrFile(String action, ChatHack client) throws IOException {
 			firstPrivateMessage = action;
 			String[] s = action.split(" ", 2);
@@ -93,13 +107,20 @@ public class ChatHack {
 			} 
 		}
 
+		/**
+		 * Will treat every action a client can take.
+		 * @param client a {@link ChatHack}
+		 * @throws IOException a {@link IOException}
+		 * @throws InterruptedException a {@link InterruptedException}
+		 */
 		public void treat(ChatHack client) throws IOException, InterruptedException {
 			if (!client.uniqueKey.isValid()) {
 				logger.log(Level.SEVERE, "server closed is connexion with you");
 				end(client);	
 				System.exit(1);
 			}
-			
+			currentTime = System.currentTimeMillis();
+			// connection request
 			if (state == State.WAITING_PUBLIC_CONNECTION) {
 				client.sendPublicConnectionRequest();
 				state = State.NONE;
@@ -112,6 +133,7 @@ public class ChatHack {
 				state = State.NONE;
 				return;
 			}
+			// logout to server or client
 			if (action.startsWith("^Z") || action.startsWith("^z")) {
 				String[] s = action.split(" ", 2);
 				if (s.length == 2) {
@@ -119,12 +141,13 @@ public class ChatHack {
 						return;
 					}
 					logger.info("Deconneted to client "+s[1]);
-					client.sendDeconnexionRequest(map.get(s[1]), client.login);
+					client.sendLogoutRequest(map.get(s[1]), client.login);
 					map.remove(s[1]);
 				} else {
-					client.sendDeconnexionRequest(client.uniqueKey, client.login);
+					client.sendLogoutRequest(client.uniqueKey, client.login);
 				}
 			}
+			// for the messages global or private message or file
 			else if (action.startsWith("@") || action.startsWith("/")) {
 				privateMessageOrFile(action, client);
 			} else {
@@ -133,6 +156,15 @@ public class ChatHack {
 			}
 		}
 		
+		/**
+		 * Creates a {@link ByteBuffer} of the content of the file if possible.
+		 * Then creates a frame and sends it.
+		 * @param path a {@link Path}.
+		 * @param login a {@link String}.
+		 * @param fileName a {@link String}.
+		 * @return a {@link Optional} of {@link Frame}. If the file does not exist return Optional.empty
+		 * @throws IOException a {@link IOException}
+		 */
 		private Optional<Frame> createFileFrame(Path path, String login, String fileName) throws IOException {
 			if (Files.notExists(Path.of(path.toString(), fileName), LinkOption.NOFOLLOW_LINKS)) {
 				logger.info("Cannot send this file does not exist:" + fileName);
@@ -151,6 +183,14 @@ public class ChatHack {
 			}
 		}
 		
+		/**
+		 * Sends a private message or private file.
+		 * @param client a {@link ChatHack}
+		 * @param message a {@link String}
+		 * @param login a {@link String}
+		 * @param text a {@link String}
+		 * @throws IOException a {@link IOException}
+		 */
 		private void sendingMessageOrFile(ChatHack client, String message, String login, String text) throws IOException {
 			state = State.NONE;
 			SelectionKey key = map.get(login);
@@ -173,30 +213,56 @@ public class ChatHack {
 			context.queueMessage(frame.buffer());
 		}
 		
+		/**
+		 * Wait's for an answer for the user until the TIMEOUT runs out.
+		 * @return  Yes : byte 0 or No : byte 1
+		 * @throws InterruptedException a {@link InterruptedException}
+		 */
 		private byte sendingReponse() throws InterruptedException {
 			lock.lock();
 			try {
+				lastTime = System.currentTimeMillis();
 				state = State.WATING_REPONSE;
 				while (state != State.YES && state != State.NO) {
-					condition.await();
+					currentTime = System.currentTimeMillis();
+					if (lastTime + TIMEOUT <= currentTime) {
+						logger.info("more than "+ TIMEOUT + " milleseconds have passed you did not respond");
+						break;
+					}
+					condition.await(TIMEOUT, TimeUnit.MILLISECONDS);
 				}
 				condition.signal();
+				if (state != State.YES && state != State.NO) {
+					state = State.NONE;
+				}
 				return (byte) (state == State.YES ? 0 : 1);
 			} finally {
 				lock.unlock();
 			}
 		}
 		
-		private void isWaitingReponse(ChatHack client, String reponse) {
+		/**
+		 * Waits for a response. Restarts the waiting time if response is not O or N.
+		 * @param client a {@link ChatHack}
+		 * @param reponse a {@link String}
+		 */
+		private void isWaitingResponse(ChatHack client, String reponse) {
 			lock.lock();
 			try {
+				currentTime = System.currentTimeMillis();
 				if (state == State.WATING_REPONSE) {
+					if (lastTime + TIMEOUT <= currentTime) {
+						condition.signal();
+						return;
+					}
 					if (reponse.equals("O") || reponse.equals("o")) {
 						state = State.YES;
 					} else if (reponse.equals("N") || reponse.equals("n")) {
 						state = State.NO;
+						
 					} else {
 						logger.info("ENTER O/N");
+						lastTime = System.currentTimeMillis();
 					}
 					condition.signal();
 				} 
@@ -205,6 +271,11 @@ public class ChatHack {
 			}
 		}
 		
+		/**
+		 * Put on map and sets state to NONE.
+		 * @param key a {@link String}.
+		 * @param value a {@link SelectionKey}.
+		 */
 		private void put(String key, SelectionKey value) {
 			lock.lock();
 			try {
@@ -275,7 +346,7 @@ public class ChatHack {
 						case CONNEXION:
 							logger.info("Connected to: " + client.sc.getRemoteAddress());
 							break;
-						case DECONNEXION:
+						case LOGOUT:
 							logger.info("Deconnexion to server: "+ client.sc.getRemoteAddress());
 							client.action.end(client);
 							System.exit(0);
@@ -315,16 +386,19 @@ public class ChatHack {
 				}
 				Frame frame = null;
 				try {
-					logger.info(d.secondClient()+" wants to start a private conversation enter O/N");
-					byte s = client.action.sendingReponse();
-					var data = Data.createDataPrivateConnectionReponse(d.opcode(), (byte)3, d.firstClient(), d.secondClient(), s);
-					frame = Frame.createFramePrivateConnectionReponse(data);
 					Context context = (Context)selectionKey.attachment();
 					if (context == null) {
 						return null;
 					}
+					logger.info(d.secondClient()+" wants to start a private conversation enter O/N");
+					byte s = client.action.sendingReponse();
+					var data = Data.createDataPrivateConnectionReponse(d.opcode(), (byte)3, d.firstClient(), d.secondClient(), s);
+					frame = Frame.createFramePrivateConnectionReponse(data);
+					
 					context.queueMessage(frame.buffer());
-					client.action.state = State.DONE;
+					if (client.action.state == State.NO) {
+						client.action.state = State.DONE;
+					}
 				} catch (InterruptedException e) {
 					
 				}
@@ -410,7 +484,7 @@ public class ChatHack {
 				((Context) k.attachment()).queueMessage(frame.buffer());
 				return frame;}).
 			
-			when(Data.DataDeconnexion.class, d -> {
+			when(Data.DataLogout.class, d -> {
 				client.action.map.remove(d.login());
 				logger.info("Deconnected to "+d.login());
 				return null;
@@ -514,7 +588,6 @@ public class ChatHack {
 		 * @throws IOException
 		 */
 		private void doRead() throws IOException {
-			
 			if (socketChannel.read(bbin) == -1) {
 				closed = true;
 			}
@@ -590,6 +663,7 @@ public class ChatHack {
 	private final Optional<String> password;
 	private final Action action;
 	private Thread thread;
+	private static final int TIMEOUT = 5_000;
 	
 
 	/**
@@ -642,19 +716,26 @@ public class ChatHack {
 
 	}
 
+	/**
+	 * Gets the next action for the client.
+	 * @throws InterruptedException a {@link InterruptedException}
+	 */
 	private void sendAction() throws InterruptedException {
 		while (!Thread.interrupted() && !action.isDone(this)) {
 			try (Scanner scanner = new Scanner(System.in)) {
 				while (scanner.hasNextLine()) {
 					String message = scanner.nextLine();
 					action.actions.put(message);
-					action.isWaitingReponse(this, message);
+					action.isWaitingResponse(this, message);
 					selector.wakeup();
 				}
 			}
 		}
 	}
 
+	/**
+	 * Creates the frame for the public connection request and sends it.
+	 */
 	private void sendPublicConnectionRequest() {
 		if (uniqueKey.attachment() == null) {
 			return;
@@ -666,6 +747,11 @@ public class ChatHack {
 		context.queueMessage(frame.buffer());
 	}
 	
+	
+	/**
+	 * Creates the frame for the global message and sends it.
+	 * @param message a {@link String}.
+	 */
 	private void sendGlobalMessage(String message) {
 		if (uniqueKey.attachment() == null) {
 			return;
@@ -676,6 +762,10 @@ public class ChatHack {
 		context.queueMessage(frame.buffer());
 	}	
 	
+	/**
+	 * Creates the frame for the private connection request and sends it.
+	 * @param secondClient a {@link String}
+	 */
 	private void sendPrivateConnectionRequest(String secondClient) {
 		if (uniqueKey.attachment() == null) {
 			return;
@@ -686,12 +776,17 @@ public class ChatHack {
 		context.queueMessage(frame.buffer());
 	}
 	
-	private void sendDeconnexionRequest(SelectionKey key, String login) {
+	/**
+	 * Creates the frame for the logout request and sends it.
+	 * @param key a {@link SelectionKey}.
+	 * @param login a {@link String}.
+	 */
+	private void sendLogoutRequest(SelectionKey key, String login) {
 		if (key.attachment() == null) {
 			return;
 		}
 		Context context = (Context)key.attachment();
-		var data = Data.createDataDeconnexion(StandardOperation.DECONNEXION, login);
+		var data = Data.createDataLogout(StandardOperation.LOGOUT, login);
 		Frame frame = Frame.createFrameDeconnexion(data);
 	
 		context.queueMessage(frame.buffer());
@@ -723,7 +818,7 @@ public class ChatHack {
 		Set<SelectionKey> selectedKeys = selector.selectedKeys();
 		thread.start();
 		while (!Thread.interrupted() && !action.isDone(this)) {
-			selector.select();
+			selector.select(TIMEOUT);
 			processSelectedKeys(selectedKeys);
 			action.treat(this);
 			selectedKeys.clear();
