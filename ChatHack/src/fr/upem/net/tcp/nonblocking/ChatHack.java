@@ -263,6 +263,7 @@ public class ChatHack {
 					} else {
 						logger.info("ENTER O/N");
 						lastTime = System.currentTimeMillis();
+						actions.poll();
 					}
 					condition.signal();
 				} 
