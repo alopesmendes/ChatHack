@@ -95,9 +95,11 @@ public class ChatHack {
 
 		public void treat(ChatHack client) throws IOException, InterruptedException {
 			if (!client.uniqueKey.isValid()) {
-				logger.log(Level.SEVERE, "server is closed");
+				logger.log(Level.SEVERE, "server closed is connexion with you");
 				end(client);	
+				System.exit(1);
 			}
+			
 			if (state == State.WAITING_PUBLIC_CONNECTION) {
 				client.sendPublicConnectionRequest();
 				state = State.NONE;
@@ -131,7 +133,11 @@ public class ChatHack {
 			}
 		}
 		
-		private Frame createFileFrame(Path path, String login, String fileName) throws IOException {
+		private Optional<Frame> createFileFrame(Path path, String login, String fileName) throws IOException {
+			if (Files.notExists(Path.of(path.toString(), fileName), LinkOption.NOFOLLOW_LINKS)) {
+				logger.info("Cannot send this file does not exist:" + fileName);
+				return Optional.empty();
+			}
 			try (FileChannel fc = FileChannel.open(Path.of(path.toString(), fileName), StandardOpenOption.READ)) {
 				ByteBuffer bb = ByteBuffer.allocate((int)fc.size());
 				while (bb.hasRemaining()) {
@@ -141,17 +147,15 @@ public class ChatHack {
 				}
 				bb.flip();
 				var data = Data.createDataPrivateFile(StandardOperation.PRIVATE_FILE, login, fileName, bb);
-				return Frame.createFramePrivateFile(data);
+				return Optional.of(Frame.createFramePrivateFile(data));
 			}
 		}
 		
 		private void sendingMessageOrFile(ChatHack client, String message, String login, String text) throws IOException {
 			state = State.NONE;
 			SelectionKey key = map.get(login);
-			System.out.println("ici:" + map.keySet() + " " + key.isValid());
 			if (key == null || key.attachment() == null || !key.isValid() ) {
 				map.remove(login);
-				System.out.println("--- HERE ---");
 				return;
 			} 
 			Context context = (Context)key.attachment();
@@ -160,7 +164,11 @@ public class ChatHack {
 				var data = Data.createDataPrivateMessage(StandardOperation.PRIVATE_MESSAGE, client.login, text);
 				frame = Frame.createFramePrivateMessage(data);
 			} else {
-				frame = createFileFrame(client.path, client.login, text);
+				var f = createFileFrame(client.path, client.login, text);
+				if (f.isEmpty()) {
+					return;
+				}
+				frame = f.get();
 			}
 			context.queueMessage(frame.buffer());
 		}
@@ -270,6 +278,7 @@ public class ChatHack {
 						case DECONNEXION:
 							logger.info("Deconnexion to server: "+ client.sc.getRemoteAddress());
 							client.action.end(client);
+							System.exit(0);
 							break;
 						default:
 							throw new AssertionError();
@@ -383,13 +392,6 @@ public class ChatHack {
 				SelectionKey k = client.action.map.get(d.login());
 				if (k == null || k.attachment() == null) {
 					return null;
-				}
-				if (Files.notExists(path, LinkOption.NOFOLLOW_LINKS)) {
-					var data = Data.createDataError(StandardOperation.ERROR, StandardOperation.PRIVATE_FILE);
-					Frame frame = Frame.createFrameError(data);
-					((Context) k.attachment()).queueMessage(frame.buffer());
-					return frame;
-					
 				}
 				try (FileChannel fc = FileChannel.open(path , StandardOpenOption.CREATE
 															, StandardOpenOption.TRUNCATE_EXISTING
@@ -721,11 +723,6 @@ public class ChatHack {
 		Set<SelectionKey> selectedKeys = selector.selectedKeys();
 		thread.start();
 		while (!Thread.interrupted() && !action.isDone(this)) {
-			if (!uniqueKey.isValid()) {
-				logger.log(Level.SEVERE, "Interruption of Client - Server connection");
-				Thread.currentThread().interrupt();
-				return;
-			}
 			selector.select();
 			processSelectedKeys(selectedKeys);
 			action.treat(this);

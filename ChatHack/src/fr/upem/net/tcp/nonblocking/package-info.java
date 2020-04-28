@@ -1,5 +1,5 @@
 /**
- * <p>This package will generate the Server and CLient.</p>
+ * <p>This package will generate the Server and Client.</p>
  * @author LOPES MENDES Ailton
  * @author LAMBERT--DELAVAQUERIE Fabien
  */

@@ -14,8 +14,6 @@
 	<property name="server-class"  	value="fr.upem.net.tcp.nonblocking.ServerChatHack"/>
 	<property name="serverJar" 		value="ServerChathack"/>
 
-
-
     <target name="clean">
         <delete dir="${build.dir}"/>
     </target>
