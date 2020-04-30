@@ -89,7 +89,6 @@ public class ChatHack {
 			String[] s = action.split(" ", 2);
 			String log = s[0].substring(1);
 			if (map.containsKey(log) && !map.get(log).isValid()) {
-				logger.info("Client "+log+ " does not exist");
 				map.remove(log);
 			}
 			if (log.equals(client.login)) {
@@ -115,9 +114,9 @@ public class ChatHack {
 		 */
 		public void treat(ChatHack client) throws IOException, InterruptedException {
 			if (!client.uniqueKey.isValid()) {
-				logger.log(Level.SEVERE, "server closed is connexion with you");
+				logger.log(Level.SEVERE, "server closed it's connexion with you");
 				end(client);	
-				System.exit(1);
+				System.exit(0);
 			}
 			currentTime = System.currentTimeMillis();
 			// connection request
@@ -137,10 +136,13 @@ public class ChatHack {
 			if (action.startsWith("^Z") || action.startsWith("^z")) {
 				String[] s = action.split(" ", 2);
 				if (s.length == 2) {
+					if (client.login.equals(s[1])) {
+						logger.info("Cannot logout with yourself");
+					}
 					if (!map.containsKey(s[1]) || !map.get(s[1]).isValid()) {
 						return;
 					}
-					logger.info("Deconneted to client "+s[1]);
+					logger.info("Logout to client "+s[1]);
 					client.sendLogoutRequest(map.get(s[1]), client.login);
 					map.remove(s[1]);
 				} else {
@@ -348,7 +350,7 @@ public class ChatHack {
 							logger.info("Connected to: " + client.sc.getRemoteAddress());
 							break;
 						case LOGOUT:
-							logger.info("Deconnexion to server: "+ client.sc.getRemoteAddress());
+							logger.info("Logout to server: "+ client.sc.getRemoteAddress());
 							client.action.end(client);
 							System.exit(0);
 							break;
@@ -365,6 +367,7 @@ public class ChatHack {
 						case CONNEXION:
 							logger.info("Connection failed");
 							client.action.end(client);
+							System.exit(0);
 							break;
 						case PRIVATE_CONNEXION:
 							logger.info("failed private connexion demand ");
@@ -487,7 +490,7 @@ public class ChatHack {
 			
 			when(Data.DataLogout.class, d -> {
 				client.action.map.remove(d.login());
-				logger.info("Deconnected to "+d.login());
+				logger.info("Logout to "+d.login());
 				return null;
 			}).
 			
@@ -788,7 +791,7 @@ public class ChatHack {
 		}
 		Context context = (Context)key.attachment();
 		var data = Data.createDataLogout(StandardOperation.LOGOUT, login);
-		Frame frame = Frame.createFrameDeconnexion(data);
+		Frame frame = Frame.createFrameLogout(data);
 	
 		context.queueMessage(frame.buffer());
 	}

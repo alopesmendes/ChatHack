@@ -20,7 +20,7 @@ public class FileReader implements Reader<ByteBuffer>{
 	/**
 	 * Constructs a FileReader with it's {@link ByteBuffer}.
 	 * <p>
-     * The FileReader will flip at the start and compact at the end after it gets all {@link Byte}.<br>
+     * The FileReader will flip at the start and compact at the end after it gets all bytes.<br>
      * The method get will return a {@link ByteBuffer}.
      * </p>
 	 * @param bb a {@link ByteBuffer}.

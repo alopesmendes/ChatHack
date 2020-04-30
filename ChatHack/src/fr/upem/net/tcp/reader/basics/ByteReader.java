@@ -18,7 +18,7 @@ public class ByteReader implements Reader<Byte> {
     private Byte value;
     
     /**
-     * Constructs a ByteReader with it's ByteBuffer.
+     * Constructs a ByteReader with it's {@link ByteBuffer}.
      * <p>
      * The ByteReader will flip at the start and compact at the end after it get's the {@link Byte}.<br>
      * The method get will return a {@link Byte}.

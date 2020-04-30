@@ -35,7 +35,13 @@ public interface Frame {
 	ByteBuffer buffer();
 
 	/**
-	 * Creates a Frame Global with it's {@link DataGlobalClient}.
+	 * <p>Creates a Frame Global with it's {@link DataGlobalClient}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|login    |message  |
+	 * |------|---------|---------|
+	 * |byte  |int+bytes|int+bytes|
+	 * </pre>
 	 * @param data a {@link DataGlobalClient}.
 	 * @return Frame.
 	 */
@@ -54,7 +60,13 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Error Frame with it's {@link DataError}.
+	 * <p>Creates a Error Frame with it's {@link DataError}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|requestCode    |
+	 * |------|---------------|
+	 * |byte  |byte           |
+	 * </pre>
 	 * @param data a {@link DataError}.
 	 * @return Frame.
 	 */
@@ -68,7 +80,19 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Connection Frame with it's {@link DataConnectionClient}.
+	 * <p>Creates a Connection Frame with it's {@link DataConnectionClient}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|connexion|login    |
+	 * |------|---------|---------|
+	 * |byte  |byte     |int+bytes|
+	 * </pre>
+	 * Or
+	 * <pre>
+	 * |opcode|connexion|login    |password |
+	 * |------|---------|---------|---------|
+	 * |byte  |byte     |int+bytes|int+bytes|
+	 * </pre>
 	 * @param data a {@link DataConnectionClient}.
 	 * @return Frame.
 	 */
@@ -97,7 +121,19 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Frame Connection Mdp with it's {@link DataConnectionServerMdp}.
+	 * <p>Creates a Frame Connection Mdp with it's {@link DataConnectionServerMdp}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|id  |login    |
+	 * |------|----|---------|
+	 * |byte  |long|int+bytes|
+	 * </pre>
+	 * Or
+	 * <pre>
+	 * |opcode|id  |login    |password |
+	 * |------|----|---------|---------|
+	 * |byte  |long|int+bytes|int+bytes|
+	 * </pre>
 	 * @param data a {@link DataConnectionServerMdp}.
 	 * @return Frame.
 	 */
@@ -106,30 +142,36 @@ public interface Frame {
 		ByteBuffer login = new FrameText(data.login).buffer();
 		Optional<ByteBuffer> password = data.password.isPresent() ? 
 				Optional.of(new FrameText(data.password.get()).buffer()) : Optional.empty();
-		int size = Byte.BYTES+Long.BYTES+login.remaining();
-		if (password.isPresent()) {
-			size += password.get().remaining();
-		}
-		if (size > 1_024) {
-			throw new IllegalArgumentException("Cannot be superior to 1_024 bytes");
-		}
-		return () -> {
-			ByteBuffer bb = ByteBuffer.allocate(1_024);
+				int size = Byte.BYTES+Long.BYTES+login.remaining();
+				if (password.isPresent()) {
+					size += password.get().remaining();
+				}
+				if (size > 1_024) {
+					return createFrameError(Data.createDataError(StandardOperation.ERROR, StandardOperation.CONNEXION));
+				}
+				return () -> {
+					ByteBuffer bb = ByteBuffer.allocate(1_024);
 
-			bb.put(data.typeConnexion);
-			bb.putLong(data.id);
-			bb.put(login);
-			if (password.isPresent()) {
-				bb.put(password.get());
-				password.get().flip();
-			}
-			login.flip();
-			return bb.flip();
-		};
+					bb.put(data.typeConnexion);
+					bb.putLong(data.id);
+					bb.put(login);
+					if (password.isPresent()) {
+						bb.put(password.get());
+						password.get().flip();
+					}
+					login.flip();
+					return bb.flip();
+				};
 	}
 
 	/**
-	 * Creates a Frame Connect Mdp Server with it's {@link DataConnectionServerMdpReponse}.
+	 * <p>Creates a Frame Connect Mdp Server with it's {@link DataConnectionServerMdpReponse}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|id  |
+	 * |------|----|
+	 * |byte  |long|
+	 * </pre>
 	 * @param data a {@link DataConnectionServerMdpReponse}.
 	 * @return Frame.
 	 */
@@ -145,7 +187,13 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Frame Private Connection Requested with it's {@link DataPrivateConnectionRequested}.
+	 * <p>Creates a Frame Private Connection Requested with it's {@link DataPrivateConnectionRequested}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|step|firstClient|secondClient|
+	 * |------|----|-----------|------------|
+	 * |byte  |byte|int+bytes  |int+bytes   |
+	 * </pre>
 	 * @param data a {@link DataPrivateConnectionRequested}.
 	 * @return Frame.
 	 */
@@ -164,7 +212,13 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Frame Private Connection Reponse with it's {@link DataPrivateConnectionReponse}.
+	 * <p>Creates a Frame Private Connection Reponse with it's {@link DataPrivateConnectionReponse}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|step|firstClient|secondClient|state|
+	 * |------|----|-----------|------------|-----|
+	 * |byte  |byte|int+bytes  |int+bytes   |byte |
+	 * </pre>
 	 * @param data a {@link DataPrivateConnectionReponse}.
 	 * @return Frame.
 	 */
@@ -184,7 +238,13 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Frame Private Connection Accepted with it's {@link DataPrivateConnectionAccepted}.
+	 * <p>Creates a Frame Private Connection Accepted with it's {@link DataPrivateConnectionAccepted}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|step|firstClient|secondClient|port|socket address|token|
+	 * |------|----|-----------|------------|----|--------------|-----|
+	 * |byte  |byte|int+bytes  |int+bytes   |int |int+bytes     |long |
+	 * </pre>
 	 * @param data a {@link DataPrivateConnectionAccepted}.
 	 * @return Frame.
 	 */
@@ -210,7 +270,13 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Frame Private Message with it's {@link DataPrivateMessage}.
+	 * <p>Creates a Frame Private Message with it's {@link DataPrivateMessage}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|login    |message  |
+	 * |------|---------|---------|
+	 * |byte  |int+bytes|int+bytes|
+	 * </pre>
 	 * @param data a {@link DataPrivateMessage}.
 	 * @return Frame.
 	 */
@@ -229,7 +295,13 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Frame Private File with it's {@link DataPrivateFile}.
+	 * <p>Creates a Frame Private File with it's {@link DataPrivateFile}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|login    |file name|file data|
+	 * |------|---------|---------|---------|
+	 * |byte  |int+bytes|int+bytes|int+bytes|
+	 * </pre>
 	 * @param data a {@link DataPrivateFile}.
 	 * @return Frame.
 	 */
@@ -254,7 +326,13 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Frame Ack with it's {@link DataAck}.
+	 * <p>Creates a Frame Ack with it's {@link DataAck}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|requestCode|
+	 * |------|-----------|
+	 * |byte  |byte       |
+	 * </pre>
 	 * @param data a {@link DataAck}.
 	 * @return Frame.
 	 */
@@ -268,7 +346,13 @@ public interface Frame {
 	}
 
 	/**
-	 * Creates a Frame with it's {@link DataPrivateAck}.
+	 * <p>Creates a Frame with it's {@link DataPrivateAck}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|requestCode|login    |
+	 * |------|-----------|---------|
+	 * |byte  |byte       |int+bytes|
+	 * </pre>
 	 * @param data a {@link DataPrivateAck}.
 	 * @return Frame
 	 */
@@ -283,13 +367,19 @@ public interface Frame {
 			return bb.flip();
 		};
 	}
-	
+
 	/**
-	 * Creates a Frame Deconnexion with it's {@link DataLogout}.
+	 * <p>Creates a Frame Logout with it's {@link DataLogout}.</p>
+	 * Representation of our {@link ByteBuffer}.
+	 * <pre>
+	 * |opcode|login    |
+	 * |------|---------|
+	 * |byte  |int+bytes|
+	 * </pre>
 	 * @param data a {@link DataLogout}.
 	 * @return Frame.
 	 */
-	static Frame createFrameDeconnexion(DataLogout data) {
+	static Frame createFrameLogout(DataLogout data) {
 		Objects.requireNonNull(data);
 		ByteBuffer login = new FrameText(data.login).buffer();
 
@@ -301,7 +391,7 @@ public interface Frame {
 			return bb.flip();
 		};
 	}
-	
 
-	
+
+
 }
