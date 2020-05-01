@@ -576,8 +576,8 @@ public class ChatHack {
 							silentlyClose();
 							return;
 						}
-				} catch(IllegalArgumentException e) {
-					logger.info("inexistant package format.");
+				} catch(Exception e) {
+					logger.info("inexistant package format." + e.getMessage());
 				}
 
 			}
@@ -886,6 +886,10 @@ public class ChatHack {
 			return;
 		}
 		Path path = Path.of(args[0]);
+		if (!Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+			System.err.println("The folliwing path is not a directory");
+			return;
+		}
 		String host = args[1];
 		int port = Integer.parseInt(args[2]);
 		String login = args[3];

@@ -268,8 +268,8 @@ public class ServerChatHack {
 							silentlyClose();
 							return;
 					}
-				} catch (IllegalArgumentException e) {
-					logger.info("This format does not exist");
+				} catch (Exception e) {
+					logger.info("This format does not exist " + e.getMessage());
 					silentlyClose();
 					return;
 				}

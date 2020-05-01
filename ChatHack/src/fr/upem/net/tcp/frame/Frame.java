@@ -141,27 +141,29 @@ public interface Frame {
 		Objects.requireNonNull(data);
 		ByteBuffer login = new FrameText(data.login).buffer();
 		Optional<ByteBuffer> password = data.password.isPresent() ? 
-				Optional.of(new FrameText(data.password.get()).buffer()) : Optional.empty();
-				int size = Byte.BYTES+Long.BYTES+login.remaining();
-				if (password.isPresent()) {
-					size += password.get().remaining();
-				}
-				if (size > 1_024) {
-					return createFrameError(Data.createDataError(StandardOperation.ERROR, StandardOperation.CONNEXION));
-				}
-				return () -> {
-					ByteBuffer bb = ByteBuffer.allocate(1_024);
+		Optional.of(new FrameText(data.password.get()).buffer()) : Optional.empty();
+		
+		int size = Byte.BYTES+Long.BYTES+login.remaining();
+		if (password.isPresent()) {
+			size += password.get().remaining();
+		}
+		if (size >= 1_024) {
+			throw new IllegalArgumentException();
+		}
+		final int s = size;
+		return () -> {
+			ByteBuffer bb = ByteBuffer.allocate(s);
 
-					bb.put(data.typeConnexion);
-					bb.putLong(data.id);
-					bb.put(login);
-					if (password.isPresent()) {
-						bb.put(password.get());
-						password.get().flip();
-					}
-					login.flip();
-					return bb.flip();
-				};
+			bb.put(data.typeConnexion);
+			bb.putLong(data.id);
+			bb.put(login);
+			if (password.isPresent()) {
+				bb.put(password.get());
+				password.get().flip();
+			}
+			login.flip();
+			return bb.flip();
+		};
 	}
 
 	/**
