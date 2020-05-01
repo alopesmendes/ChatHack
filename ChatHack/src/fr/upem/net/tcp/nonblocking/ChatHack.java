@@ -822,7 +822,7 @@ public class ChatHack {
 		Set<SelectionKey> selectedKeys = selector.selectedKeys();
 		thread.start();
 		while (!Thread.interrupted() && !action.isDone(this)) {
-			selector.select(TIMEOUT);
+			selector.select();
 			processSelectedKeys(selectedKeys);
 			action.treat(this);
 			selectedKeys.clear();
